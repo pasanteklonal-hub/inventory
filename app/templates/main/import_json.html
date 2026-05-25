@@ -1,0 +1,27 @@
+{% extends 'base.html' %}
+
+{% block title %}Importar JSON{% endblock %}
+
+{% block content %}
+  <div class="my-5">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+      <div>
+        <h2>Importar archivo JSON</h2>
+        <p class="text-muted mb-0">Sube un archivo .json con la estructura de categorías y items. Esto reemplazará las categorías existentes.</p>
+      </div>
+      <a href="/equipos" class="btn btn-secondary">Volver</a>
+    </div>
+
+    <div class="card">
+      <div class="card-body">
+        <form method="post" enctype="multipart/form-data">
+          <div class="mb-3">
+            <label for="file" class="form-label">Archivo JSON</label>
+            <input class="form-control" type="file" id="file" name="file" accept="application/json" required>
+          </div>
+          <button type="submit" class="btn btn-primary">Importar</button>
+        </form>
+      </div>
+    </div>
+  </div>
+{% endblock %}

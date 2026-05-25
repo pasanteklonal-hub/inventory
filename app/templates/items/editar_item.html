@@ -1,0 +1,50 @@
+{% extends 'base.html' %}
+
+{% block title %}Editar Item #{{ item.id }}{% endblock %}
+
+{% block content %}
+  <div class="my-5">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+      <div>
+        <h2>Editar Item #{{ item.id }}</h2>
+        <p class="text-muted mb-0">Categoría: <strong>{{ categoria.nombre }}</strong></p>
+      </div>
+      <a href="/inventario-general" class="btn btn-secondary">Volver al inventario</a>
+    </div>
+
+    <form method="post" class="card shadow-sm p-4">
+      <div class="mb-4">
+        <label class="form-label">Categoría</label>
+        <input type="text" class="form-control" value="{{ categoria.nombre }}" disabled>
+      </div>
+
+      {% for campo in categoria.campos %}
+        {% set valor = item.datos.get(campo.nombre, '') if item.datos else '' %}
+        <div class="mb-3">
+          <label for="campo_{{ campo.id }}" class="form-label">{{ campo.nombre }} {% if campo.requerido %}<span class="text-danger">*</span>{% endif %}</label>
+          {% if campo.tipo == 'select' %}
+            <select class="form-select" id="campo_{{ campo.id }}" name="campo_{{ campo.id }}" {% if campo.requerido %}required{% endif %}>
+              <option value="">-- Selecciona --</option>
+              {% for opcion in campo.opciones.split(',') if campo.opciones %}
+                <option value="{{ opcion.strip() }}" {% if opcion.strip() == valor %}selected{% endif %}>{{ opcion.strip() }}</option>
+              {% endfor %}
+            </select>
+          {% elif campo.tipo == 'textarea' %}
+            <textarea class="form-control" id="campo_{{ campo.id }}" name="campo_{{ campo.id }}" rows="3" {% if campo.requerido %}required{% endif %}>{{ valor }}</textarea>
+          {% elif campo.tipo == 'date' %}
+            <input type="date" class="form-control" id="campo_{{ campo.id }}" name="campo_{{ campo.id }}" value="{{ valor }}" {% if campo.requerido %}required{% endif %}>
+          {% elif campo.tipo == 'number' %}
+            <input type="number" class="form-control" id="campo_{{ campo.id }}" name="campo_{{ campo.id }}" value="{{ valor }}" {% if campo.requerido %}required{% endif %}>
+          {% else %}
+            <input type="text" class="form-control" id="campo_{{ campo.id }}" name="campo_{{ campo.id }}" value="{{ valor }}" {% if campo.requerido %}required{% endif %}>
+          {% endif %}
+        </div>
+      {% endfor %}
+
+      <div class="d-flex justify-content-between mt-4">
+        <a href="/inventario-general" class="btn btn-secondary">Cancelar</a>
+        <button type="submit" class="btn btn-primary">Guardar cambios</button>
+      </div>
+    </form>
+  </div>
+{% endblock %}

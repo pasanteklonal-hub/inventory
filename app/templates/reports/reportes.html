@@ -1,0 +1,50 @@
+{% extends 'base.html' %}
+
+{% block title %}Reportes de Movimientos{% endblock %}
+
+{% block content %}
+  <div class="my-5">
+    <h2 class="mb-4">Reportes de Movimientos</h2>
+
+    {% if movimientos %}
+      <div class="table-responsive">
+        <table class="table table-striped table-hover">
+          <thead class="table-dark">
+            <tr>
+              <th>Fecha</th>
+              <th>Usuario</th>
+              <th>Tipo</th>
+              <th>Item ID</th>
+              <th>Destino</th>
+              <th>Observación</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for mov in movimientos %}
+              <tr>
+                <td><small>{{ mov.created_at.strftime('%d/%m/%Y %H:%M') }}</small></td>
+                <td><strong>{{ mov.usuario.username }}</strong></td>
+                <td>
+                  {% if mov.tipo == 'agregar' %}
+                    <span class="badge bg-success">{{ mov.tipo }}</span>
+                  {% elif mov.tipo == 'consumir' %}
+                    <span class="badge bg-danger">{{ mov.tipo }}</span>
+                  {% else %}
+                    <span class="badge bg-secondary">{{ mov.tipo }}</span>
+                  {% endif %}
+                </td>
+                <td>#{{ mov.item_id }}</td>
+                <td>{{ mov.destino or '-' }}</td>
+                <td><small class="text-muted">{{ mov.observacion or '-' }}</small></td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <div class="alert alert-info">
+        <p>No hay movimientos aún.</p>
+      </div>
+    {% endif %}
+  </div>
+{% endblock %}

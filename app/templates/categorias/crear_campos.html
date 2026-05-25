@@ -1,0 +1,91 @@
+{% extends 'base.html' %}
+
+{% block title %}Crear Campos - {{ categoria.nombre }}{% endblock %}
+
+{% block content %}
+  <div class="my-5">
+    <h2 class="mb-4">Configurar Campos para: <strong>{{ categoria.nombre }}</strong></h2>
+
+    <div class="row">
+      <div class="col-md-6">
+        <h5 class="mb-3">Añadir Nuevo Campo</h5>
+        <form method="post" class="card shadow-sm p-4">
+          <div class="mb-3">
+            <label for="nombre" class="form-label">Nombre del Campo <span class="text-danger">*</span></label>
+            <input type="text" class="form-control" id="nombre" name="nombre" required placeholder="Ej: Modelo">
+          </div>
+
+          <div class="mb-3">
+            <label for="tipo" class="form-label">Tipo de Dato <span class="text-danger">*</span></label>
+            <select class="form-select" id="tipo" name="tipo" required>
+              <option value="">-- Selecciona --</option>
+              <option value="text">Texto</option>
+              <option value="number">Número</option>
+              <option value="date">Fecha</option>
+              <option value="email">Email</option>
+              <option value="select">Selección (opciones fijas)</option>
+              <option value="textarea">Área de Texto</option>
+            </select>
+          </div>
+
+          <div class="mb-3">
+            <label for="opciones" class="form-label">Opciones (separadas por comas, para "Selección")</label>
+            <input type="text" class="form-control" id="opciones" name="opciones" placeholder="Ej: Activo, Inactivo, Mantenimiento">
+          </div>
+
+          <div class="form-check mb-3">
+            <input class="form-check-input" type="checkbox" id="requerido" name="requerido">
+            <label class="form-check-label" for="requerido">Campo requerido</label>
+          </div>
+
+          <button type="submit" class="btn btn-success w-100">Añadir Campo</button>
+        </form>
+      </div>
+
+      <div class="col-md-6">
+          <h5 class="mb-3">Campos Creados</h5>
+          <h6 class="mt-3">Editar Categoría</h6>
+          <form method="post" class="card p-3 mb-3">
+            <input type="hidden" name="action" value="edit_categoria">
+            <div class="mb-2">
+              <label class="form-label">Nombre</label>
+              <input class="form-control" name="nombre_categoria" value="{{ categoria.nombre }}" required>
+            </div>
+            <div class="mb-2">
+              <label class="form-label">Descripción</label>
+              <input class="form-control" name="descripcion_categoria" value="{{ categoria.descripcion or '' }}">
+            </div>
+            <button class="btn btn-sm btn-primary" type="submit">Guardar categoría</button>
+          </form>
+        {% if campos %}
+          <div class="list-group">
+            {% for campo in campos %}
+              <div class="list-group-item d-flex justify-content-between align-items-start">
+                <div>
+                  <h6 class="mb-1">{{ campo.nombre }}</h6>
+                  <small class="text-muted">
+                    Tipo: <span class="badge bg-info">{{ campo.tipo }}</span>
+                    {% if campo.requerido %}
+                      <span class="badge bg-danger">Requerido</span>
+                    {% endif %}
+                  </small>
+                </div>
+                <div>
+                  <form method="post" style="display:inline">
+                    <input type="hidden" name="action" value="delete_campo">
+                    <input type="hidden" name="campo_id" value="{{ campo.id }}">
+                    <button class="btn btn-sm btn-outline-danger" type="submit" onclick="return confirm('Eliminar campo y borrar datos de items?')">Eliminar</button>
+                  </form>
+                </div>
+              </div>
+            {% endfor %}
+          </div>
+        {% else %}
+          <div class="alert alert-info">Sin campos aún. Añade uno para empezar.</div>
+        {% endif %}
+
+        <a href="/equipos" class="btn btn-secondary w-100 mt-4">Terminar Configuración</a>
+      </div>
+    </div>
+  </div>
+{% endblock %}

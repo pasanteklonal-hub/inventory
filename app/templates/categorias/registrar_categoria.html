@@ -1,0 +1,30 @@
+{% extends 'base.html' %}
+
+{% block title %}Registrar Categoría{% endblock %}
+
+{% block content %}
+  <div class="row justify-content-center my-5">
+    <div class="col-md-6">
+      <h2 class="mb-4">Crear Nueva Categoría</h2>
+      
+      <form method="post" class="card shadow-sm p-4">
+        <div class="mb-3">
+          <label for="nombre" class="form-label">Nombre <span class="text-danger">*</span></label>
+          <input type="text" class="form-control" id="nombre" name="nombre" required placeholder="Ej: Impresoras">
+        </div>
+
+        <div class="mb-3">
+          <label for="descripcion" class="form-label">Descripción</label>
+          <textarea class="form-control" id="descripcion" name="descripcion" rows="3" placeholder="Detalles de esta categoría..."></textarea>
+        </div>
+
+        <button type="submit" class="btn btn-primary w-100">Crear Categoría</button>
+        <a href="/equipos" class="btn btn-secondary w-100 mt-2">Cancelar</a>
+      </form>
+
+      <div class="alert alert-info mt-4">
+        <p><strong>Nota:</strong> Después de crear la categoría, podrás añadir campos personalizados (texto, número, fecha, etc).</p>
+      </div>
+    </div>
+  </div>
+{% endblock %}

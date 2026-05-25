@@ -1,0 +1,65 @@
+{% extends 'base.html' %}
+
+{% block title %}Dashboard{% endblock %}
+
+{% block content %}
+  <div class="py-5">
+    <h1 class="display-5 mb-5">Bienvenido, {{ current_user.username }}</h1>
+
+    <div class="row g-4">
+      <div class="col-md-6">
+        <div class="card h-100 shadow-sm">
+          <div class="card-body text-center">
+            <p class="card-text">Registra nuevos equipos o items en el inventario.</p>
+            <a href="/agregar-item" class="btn btn-primary">Agregar Item</a>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-md-6">
+        <div class="card h-100 shadow-sm">
+          <div class="card-body text-center">
+            <p class="card-text">Retira o consume items del inventario.</p>
+            <a href="/consumir-item" class="btn btn-warning">Consumir Item</a>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-md-6">
+        <div class="card h-100 shadow-sm">
+          <div class="card-body text-center">
+            <p class="card-text">Gestiona las categorías de equipos.</p>
+            <a href="/equipos" class="btn btn-info">Categorías</a>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-md-6">
+        <div class="card h-100 shadow-sm">
+          <div class="card-body text-center">
+            <p class="card-text">Ver todos los items y filtrar por categorías.</p>
+            <a href="/inventario-general" class="btn btn-primary">Inventario General</a>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-md-6">
+        <div class="card h-100 shadow-sm">
+          <div class="card-body text-center">
+            <p class="card-text">Genera un reporte de stock actual y descárgalo en XLSX.</p>
+            <a href="/reporte-semanal" class="btn btn-primary">Reporte Semanal</a>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-md-6">
+        <div class="card h-100 shadow-sm">
+          <div class="card-body text-center">
+            <p class="card-text">Consulta el historial de movimientos.</p>
+            <a href="/reportes" class="btn btn-success">Reportes</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+{% endblock %}

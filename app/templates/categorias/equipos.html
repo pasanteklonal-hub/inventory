@@ -1,0 +1,45 @@
+{% extends 'base.html' %}
+
+{% block title %}Categorías de Equipos{% endblock %}
+
+{% block content %}
+  <div class="my-5">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+      <h2>Categorías de Equipos</h2>
+      <a href="/registrar" class="btn btn-primary">+ Crear Categoría</a>
+    </div>
+
+    {% if categorias %}
+      <div class="row g-4">
+        {% for categoria in categorias %}
+          <div class="col-md-6 col-lg-4">
+            <div class="card h-100 shadow-sm">
+              <div class="card-body">
+                <h5 class="card-title">{{ categoria.nombre }}</h5>
+                <p class="card-text text-muted">
+                  {% if categoria.descripcion %}
+                    {{ categoria.descripcion }}
+                  {% else %}
+                    Sin descripción
+                  {% endif %}
+                </p>
+                <small class="text-muted">
+                  <strong>{{ categoria.campos|length }}</strong> campos |
+                  <strong>{{ categoria.active_items_count }}</strong> items activos
+                </small>
+              </div>
+              <div class="card-footer bg-transparent">
+                <a href="/items/{{ categoria.id }}" class="btn btn-sm btn-info">Ver Items</a>
+                <a href="/categoria/{{ categoria.id }}/campos" class="btn btn-sm btn-secondary">Campos</a>
+              </div>
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div class="alert alert-info">
+        <p>No hay categorías aún. <a href="/registrar">Crea una nueva</a></p>
+      </div>
+    {% endif %}
+  </div>
+{% endblock %}

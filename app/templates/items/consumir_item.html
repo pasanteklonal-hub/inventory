@@ -1,0 +1,77 @@
+{% extends 'base.html' %}
+
+{% block title %}Consumir Item{% endblock %}
+
+{% block content %}
+  <div class="my-5">
+    <div class="row justify-content-center">
+      <div class="col-md-8">
+        <h2 class="mb-4">Retirar / Consumir Item</h2>
+
+        <form method="post" class="card shadow-sm p-4">
+          <div class="mb-3">
+            <label for="categoria_id" class="form-label">Categoría <span class="text-danger">*</span></label>
+            <select class="form-select" id="categoria_id" name="categoria_id" required onchange="cargarItems()">
+              <option value="">-- Selecciona una categoría --</option>
+              {% for categoria in categorias %}
+                <option value="{{ categoria.id }}">{{ categoria.nombre }}</option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <div class="mb-3">
+            <label for="item_id" class="form-label">Item <span class="text-danger">*</span></label>
+            <select class="form-select" id="item_id" name="item_id" required>
+              <option value="">-- Selecciona un item --</option>
+            </select>
+          </div>
+
+          <div class="mb-3">
+            <label for="destino" class="form-label">Destino <span class="text-danger">*</span></label>
+            <input type="text" class="form-control" id="destino" name="destino" required placeholder="Ej: Oficina A, Técnico Juan, Taller">
+          </div>
+
+          <div class="mb-3">
+            <label for="observacion" class="form-label">Observación</label>
+            <textarea class="form-control" id="observacion" name="observacion" rows="3" placeholder="Detalles adicionales..."></textarea>
+          </div>
+
+          <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+            <a href="/" class="btn btn-secondary">Cancelar</a>
+            <button type="submit" class="btn btn-danger">Consumir / Retirar</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function cargarItems() {
+      const categoriaId = document.getElementById('categoria_id').value;
+      const selectItem = document.getElementById('item_id');
+      selectItem.innerHTML = '<option value="">-- Selecciona un item --</option>';
+
+      if (!categoriaId) return;
+
+      const items = {
+        {% for cat_id, items_list in items_por_categoria.items() %}
+          {{ cat_id }}: [
+            {% for item in items_list %}
+              { id: {{ item.id }}, datos: {{ item.datos | tojson }} },
+            {% endfor %}
+          ],
+        {% endfor %}
+      };
+
+      if (items[categoriaId]) {
+        items[categoriaId].forEach(item => {
+          const datos = item.datos ? Object.values(item.datos).join(' | ') : 'Item #' + item.id;
+          const option = document.createElement('option');
+          option.value = item.id;
+          option.textContent = datos;
+          selectItem.appendChild(option);
+        });
+      }
+    }
+  </script>
+{% endblock %}

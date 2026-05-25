@@ -1,0 +1,85 @@
+# Proyecto Flask inicial
+
+Estructura mínima creada para ejecutar una aplicación Flask:
+
+- `app/` - paquete con la aplicación y rutas
+- `run.py` - punto de entrada
+- `requirements.txt` - dependencias
+
+Instrucciones rápidas:
+
+```bash
+python -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+python run.py
+```
+
+La ruta principal está en `/` y devuelve un mensaje de comprobación.
+
+Conexión a Postgres
+--------------------
+
+La app usa `SQLALCHEMY_DATABASE_URI` tomado de la variable de entorno `DATABASE_URL`.
+Ejemplo de URL para Postgres:
+
+```
+export DATABASE_URL=postgresql://user:password@localhost:5432/mydb
+```
+
+Crear tablas:
+
+```bash
+source venv/bin/activate
+python init_db.py
+```
+
+Si no se define `DATABASE_URL`, la app usará `sqlite:///dev.db` por defecto.
+
+Docker
+------
+
+Arrancar la app y una base Postgres con Docker Compose:
+
+```bash
+cd flask_app
+docker compose up --build
+```
+
+La app quedará disponible en http://localhost:5000 y la variable `DATABASE_URL` dentro
+del contenedor `web` ya está apuntando a `postgresql://user:password@db:5432/mydb`.
+
+Para crear las tablas desde el contenedor (una vez levantado):
+
+```bash
+docker compose exec web python init_db.py
+```
+
+Importar datos desde JSON
+-------------------------
+
+La aplicación incluye una herramienta para poblar la base de datos desde un archivo JSON.
+
+- CLI: `scripts/import_json.py` — borra las categorías/items/campos/movimientos existentes y crea los nuevos.
+	- Dry-run:
+
+```bash
+python scripts/import_json.py datos.json --dry-run
+```
+
+	- Ejecutar import real:
+
+```bash
+python scripts/import_json.py datos.json
+```
+
+- UI: iniciar sesión, abrir el menú de usuario -> `Importar JSON` y subir el archivo.
+
+Notas importantes:
+- La importación reemplaza datos existentes (incluye eliminación de históricos), está pensada
+	para poblar entornos de prueba o inicializar datos.
+- No se crearán registros de `Movimiento` al importar — la importación solo crea `Categoria`,
+	`Campo` e `Item`.
+
+Si prefieres usar Docker sólo para la base de datos y mantener tu entorno local, exporta
+`DATABASE_URL` apuntando al host o configura credenciales compatibles.

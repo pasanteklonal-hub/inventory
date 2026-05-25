@@ -1,0 +1,52 @@
+{% extends 'base.html' %}
+
+{% block title %}Bienvenido{% endblock %}
+
+{% block content %}
+  <div class="py-5 text-center">
+    <h1 class="display-5 mb-4">Sistema de Inventario</h1>
+    <p class="lead mb-4">Gestiona tus equipos, crea categorías personalizadas y mantén un registro completo de movimientos.</p>
+    
+    {% if current_user.is_authenticated %}
+      <p>
+        <a href="/" class="btn btn-primary btn-lg">Ir al Dashboard</a>
+      </p>
+    {% else %}
+      <div class="row g-3 justify-content-center">
+        <div class="col-md-4">
+          <a href="/login" class="btn btn-primary btn-lg w-100">Iniciar Sesión</a>
+        </div>
+        <div class="col-md-4">
+          <a href="/registrar-usuario" class="btn btn-secondary btn-lg w-100">Crear Cuenta</a>
+        </div>
+      </div>
+    {% endif %}
+
+    <div class="mt-5 row g-4">
+      <div class="col-md-4">
+        <div class="card">
+          <div class="card-body">
+            <h5 class="card-title">📦 Gestión Flexible</h5>
+            <p class="card-text">Crea categorías personalizadas con campos dinámicos según tus necesidades.</p>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="card">
+          <div class="card-body">
+            <h5 class="card-title">📝 Registro Completo</h5>
+            <p class="card-text">Mantén un historial de todos los movimientos sin borrar datos (soft delete).</p>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="card">
+          <div class="card-body">
+            <h5 class="card-title">👤 Seguridad</h5>
+            <p class="card-text">Cada movimiento queda registrado con usuario y fecha para auditoría.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+{% endblock %}
