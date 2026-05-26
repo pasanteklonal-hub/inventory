@@ -34,17 +34,19 @@ def test_filter_by_options_and_text(app):
     assert len(out) == 1
     assert out[0].datos['Descripcion'] == 'Laptop Dell'
 
-    # filter by date (YYYY-MM-DD)
+    # filter by date (YYYY-MM-DD) - should match both representations of the same date
     filtros = {'Fecha': '2023-06-01'}
     out = filter_items_by_categoria(cat.id, filtros)
-    assert len(out) == 1
-    assert out[0].datos['Descripcion'] == 'Laptop Dell'
+    assert len(out) == 2
+    descriptions = {i.datos['Descripcion'] for i in out}
+    assert {'Laptop Dell', 'Monitor'}.issubset(descriptions)
 
-    # filter by date (DD/MM/YYYY)
+    # filter by date (DD/MM/YYYY) - should behave the same (match by date)
     filtros = {'Fecha': '01/06/2023'}
     out = filter_items_by_categoria(cat.id, filtros)
-    assert len(out) == 1
-    assert out[0].datos['Descripcion'] == 'Monitor'
+    assert len(out) == 2
+    descriptions = {i.datos['Descripcion'] for i in out}
+    assert {'Laptop Dell', 'Monitor'}.issubset(descriptions)
 
 
 def test_consume_item_and_create(app):

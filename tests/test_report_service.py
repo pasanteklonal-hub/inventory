@@ -32,6 +32,7 @@ def test_report_exports(app):
         resp_xlsx = export_reporte_semanal_xlsx(summary, items)
         assert resp_xlsx.status_code == 200
         assert 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' in resp_xlsx.mimetype
+        resp_xlsx.direct_passthrough = False
         data = resp_xlsx.get_data()
         assert len(data) > 0
 
@@ -39,6 +40,7 @@ def test_report_exports(app):
         resp_pdf = export_reporte_semanal_pdf(summary, items)
         assert resp_pdf.status_code == 200
         assert 'application/pdf' in resp_pdf.mimetype
+        resp_pdf.direct_passthrough = False
         data = resp_pdf.get_data()
         assert len(data) > 0
 
@@ -46,6 +48,7 @@ def test_report_exports(app):
         resp_json = export_inventario_json()
         assert resp_json.status_code == 200
         assert 'application/json' in resp_json.mimetype
+        resp_json.direct_passthrough = False
         content = resp_json.get_data()
         parsed = json.loads(content.decode('utf-8'))
         assert isinstance(parsed, dict)

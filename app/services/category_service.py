@@ -66,7 +66,10 @@ def delete_campo_from_categoria(categoria, campo_id):
     items = Item.query.filter_by(categoria_id=categoria.id).all()
     for item in items:
         if item.datos and nombre_c in item.datos:
-            item.datos.pop(nombre_c, None)
+            # make a copy so SQLAlchemy / the JSON column detects the change
+            new_datos = dict(item.datos)
+            new_datos.pop(nombre_c, None)
+            item.datos = new_datos
             db.session.add(item)
 
     db.session.delete(campo)

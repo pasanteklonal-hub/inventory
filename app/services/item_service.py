@@ -74,14 +74,13 @@ def filter_items_by_categoria(categoria_id, filtros):
 
             # If campo has fixed options, match exact (case-insensitive)
             if campo and campo.opciones:
-                opts = [o.strip() for o in (campo.opciones or '').split(',') if o.strip()]
-                if str(filter_val).strip().lower() not in [o.lower() for o in opts]:
-                    # allow matching against the stored value as well
-                    if str(item_val).strip().lower() != str(filter_val).strip().lower():
-                        return False
-                else:
-                    if str(item_val).strip().lower() != str(filter_val).strip().lower():
-                        return False
+                # filter_val may be a list (multiple selections) or a single value
+                selected = filter_val if isinstance(filter_val, (list, tuple, set)) else [filter_val]
+                selected_norm = [str(s).strip().lower() for s in selected if s is not None and s != '']
+                item_norm = str(item_val).strip().lower()
+                # match if any selected equals the item value
+                if not any(item_norm == s for s in selected_norm):
+                    return False
                 continue
 
             # Date fields: try to parse both and compare date equality
@@ -93,8 +92,13 @@ def filter_items_by_categoria(categoria_id, filtros):
                 continue
 
             # Default: substring case-insensitive match
-            if str(filter_val).lower() not in str(item_val).lower():
-                return False
+            if isinstance(filter_val, (list, tuple, set)):
+                # accept if any of the provided filters matches as substring
+                if not any(str(f).lower() in str(item_val).lower() for f in filter_val):
+                    return False
+            else:
+                if str(filter_val).lower() not in str(item_val).lower():
+                    return False
 
         return True
 

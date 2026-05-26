@@ -14,18 +14,44 @@
           <div class="col-6 col-md-3">
             <label class="form-label">{{ campo.nombre }}</label>
             {% set current = filtros[campo.nombre] if filtros and (campo.nombre in filtros) else '' %}
-            {% if campo.opciones %}
-              <select class="form-select" name="f_{{ campo.id }}">
+            {% if campo.opciones or (campo_options and campo.id in campo_options and campo_options[campo.id]) %}
+              <select class="form-select" name="f_{{ campo.id }}" multiple size="4">
                 <option value="">-- Todos --</option>
-                {% for opt in (campo.opciones.split(',') if campo.opciones else []) %}
-                  {% set o = opt.strip() %}
-                  <option value="{{ o }}" {% if current and (current|string).lower() == o.lower() %}selected{% endif %}>{{ o }}</option>
+                {% set opts = (campo.opciones.split(',') if campo.opciones else []) %}
+                {% if not opts and campo_options and (campo.id in campo_options) %}
+                  {% set opts = campo_options[campo.id] %}
+                {% endif %}
+                {% for opt in opts %}
+                  {% set o = opt.strip() if opt is string else opt %}
+                  {% set selected = false %}
+                  {% if current %}
+                    {% if current is iterable and not current is string %}
+                      {% for cval in current %}
+                        {% if (cval|string).lower() == (o|string).lower() %}
+                          {% set selected = true %}
+                        {% endif %}
+                      {% endfor %}
+                    {% else %}
+                      {% if (current|string).lower() == (o|string).lower() %}
+                        {% set selected = true %}
+                      {% endif %}
+                    {% endif %}
+                  {% endif %}
+                  <option value="{{ o }}" {% if selected %}selected{% endif %}>{{ o }}</option>
                 {% endfor %}
               </select>
             {% elif campo.tipo and campo.tipo.lower() == 'date' %}
               <input type="date" class="form-control" name="f_{{ campo.id }}" value="{{ current }}">
             {% else %}
-              <input class="form-control" name="f_{{ campo.id }}" value="{{ current }}" placeholder="Filtrar {{ campo.nombre }}">
+              {# provide a datalist for lightweight typeahead using campo_options if available #}
+              <input class="form-control" list="dl_{{ campo.id }}" name="f_{{ campo.id }}" value="{{ current }}" placeholder="Filtrar {{ campo.nombre }}">
+              {% if campo_options and (campo.id in campo_options) and campo_options[campo.id] %}
+                <datalist id="dl_{{ campo.id }}">
+                  {% for opt in campo_options[campo.id] %}
+                    <option value="{{ opt }}"></option>
+                  {% endfor %}
+                </datalist>
+              {% endif %}
             {% endif %}
           </div>
         {% endfor %}

@@ -67,12 +67,32 @@ def listar_items(categoria_id):
     categoria = get_categoria_or_404(categoria_id)
     filtros = {}
     for campo in categoria.campos:
-        val = request.args.get(f'f_{campo.id}')
-        if val:
-            filtros[campo.nombre] = val
+        # for campos con opciones allow multiple selections
+        if campo.opciones:
+            vals = request.args.getlist(f'f_{campo.id}')
+            # normalize empty list
+            if vals:
+                filtros[campo.nombre] = [v for v in vals if v != '']
+        else:
+            val = request.args.get(f'f_{campo.id}')
+            if val:
+                filtros[campo.nombre] = val
 
     items = filter_items_by_categoria(categoria_id, filtros)
-    return render_template('items/listar_items.html', categoria=categoria, items=items, filtros=filtros)
+    # prepare options for each campo: prefer Campo.opciones, otherwise derive from items
+    campo_options = {}
+    for campo in categoria.campos:
+        if campo.opciones:
+            opts = [o.strip() for o in (campo.opciones or '').split(',') if o.strip()]
+        else:
+            vals = set()
+            for it in items:
+                if it.datos and campo.nombre in it.datos and it.datos.get(campo.nombre) is not None:
+                    vals.add(str(it.datos.get(campo.nombre)).strip())
+            opts = sorted(v for v in vals if v != '')
+        campo_options[campo.id] = opts
+
+    return render_template('items/listar_items.html', categoria=categoria, items=items, filtros=filtros, campo_options=campo_options)
 
 
 @main_bp.route('/inventario-general')
