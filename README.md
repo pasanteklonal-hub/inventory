@@ -49,6 +49,10 @@ docker compose up --build
 La app quedará disponible en http://localhost:5000 y la variable `DATABASE_URL` dentro
 del contenedor `web` ya está apuntando a `postgresql://user:password@db:5432/mydb`.
 
+Nota: el contenedor `web` ejecuta automáticamente `init_db.py` y `create_admin.py` durante
+el arranque (espera a que Postgres esté listo). Esto crea las tablas y un usuario `admin`
+por defecto (`admin@example.com` / `password123`).
+
 Para crear las tablas desde el contenedor (una vez levantado):
 
 ```bash
