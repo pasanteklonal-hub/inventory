@@ -1,6 +1,7 @@
 from .. import db
-from ..models import Item, Movimiento, Categoria
+from ..models import Item, Movimiento, Categoria, Campo
 from ..dao.categoria_dao import get_active_categories
+from datetime import datetime
 
 
 def list_categories():
@@ -45,14 +46,56 @@ def filter_items_by_categoria(categoria_id, filtros):
     if not filtros:
         return items_q
 
+    # map field name -> Campo for type/options checks
+    campos = {c.nombre: c for c in Campo.query.filter_by(categoria_id=categoria_id).all()}
+
+    def try_parse_date(value):
+        if not value:
+            return None
+        for fmt in ('%Y-%m-%d', '%d/%m/%Y', '%d-%m-%Y'):
+            try:
+                return datetime.strptime(value, fmt).date()
+            except Exception:
+                continue
+        return None
+
     def matches(item):
         datos = item.datos or {}
-        for k, v in filtros.items():
-            val = datos.get(k)
-            if val is None:
+        for field_name, filter_val in filtros.items():
+            # skip empty filters
+            if not filter_val:
+                continue
+
+            campo = campos.get(field_name)
+            item_val = datos.get(field_name)
+
+            if item_val is None:
                 return False
-            if v.lower() not in str(val).lower():
+
+            # If campo has fixed options, match exact (case-insensitive)
+            if campo and campo.opciones:
+                opts = [o.strip() for o in (campo.opciones or '').split(',') if o.strip()]
+                if str(filter_val).strip().lower() not in [o.lower() for o in opts]:
+                    # allow matching against the stored value as well
+                    if str(item_val).strip().lower() != str(filter_val).strip().lower():
+                        return False
+                else:
+                    if str(item_val).strip().lower() != str(filter_val).strip().lower():
+                        return False
+                continue
+
+            # Date fields: try to parse both and compare date equality
+            if campo and campo.tipo and campo.tipo.lower() == 'date':
+                f_date = try_parse_date(filter_val)
+                i_date = try_parse_date(str(item_val))
+                if f_date is None or i_date is None or f_date != i_date:
+                    return False
+                continue
+
+            # Default: substring case-insensitive match
+            if str(filter_val).lower() not in str(item_val).lower():
                 return False
+
         return True
 
     return [item for item in items_q if matches(item)]
