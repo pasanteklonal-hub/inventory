@@ -9,50 +9,72 @@
       <h2 class="mt-2">Items: {{ categoria.nombre }}</h2>
     </div>
     <div class="card mb-3 p-3">
+      <style>
+        .filter-block { border: 1px solid #e3e6ea; border-radius: .5rem; background: #f8f9fb; padding: 1rem; }
+        .filter-control { display: none; margin-top: .75rem; }
+        .filter-control.show { display: block; }
+        .filterable-cell { cursor: pointer; transition: background .2s ease; }
+        .filterable-cell:hover { background: #eef5ff; }
+        .filter-helper { font-size: .92rem; color: #6c757d; }
+        .filter-label-row { gap: .5rem; align-items: center; }
+      </style>
+      <div class="d-flex justify-content-between align-items-start mb-3">
+        <div>
+          <strong>Filtros</strong>
+          <p class="mb-1 filter-helper">Haz clic en "Filtrar ▾" para abrir un filtro, o haz doble clic en un valor en la tabla para filtrar por ese contenido.</p>
+        </div>
+        <button type="button" class="btn btn-outline-primary btn-sm" id="toggle-all-filters">Mostrar/Ocultar filtros</button>
+      </div>
       <form method="get" class="row g-2 align-items-end">
         {% for campo in categoria.campos %}
           <div class="col-6 col-md-3">
-            <label class="form-label">{{ campo.nombre }}</label>
             {% set current = filtros[campo.nombre] if filtros and (campo.nombre in filtros) else '' %}
-            {% if campo.opciones or (campo_options and campo.id in campo_options and campo_options[campo.id]) %}
-              <select class="form-select" name="f_{{ campo.id }}" multiple size="4">
-                <option value="">-- Todos --</option>
-                {% set opts = (campo.opciones.split(',') if campo.opciones else []) %}
-                {% if not opts and campo_options and (campo.id in campo_options) %}
-                  {% set opts = campo_options[campo.id] %}
-                {% endif %}
-                {% for opt in opts %}
-                  {% set o = opt.strip() if opt is string else opt %}
-                  {% set selected = false %}
-                  {% if current %}
-                    {% if current is iterable and not current is string %}
-                      {% for cval in current %}
-                        {% if (cval|string).lower() == (o|string).lower() %}
+            <div class="d-flex filter-label-row">
+              <label class="form-label mb-0">{{ campo.nombre }}</label>
+              <button type="button" class="btn btn-outline-secondary btn-sm toggle-filter" data-field="{{ campo.id }}">Filtrar ▾</button>
+            </div>
+
+            <div id="filter_{{ campo.id }}" class="filter-control{% if current %} show{% endif %}">
+              {% if campo.opciones or (campo_options and campo.id in campo_options and campo_options[campo.id]) %}
+                <select class="form-select" name="f_{{ campo.id }}" multiple size="4">
+                  <option value="">-- Todos --</option>
+                  {% set opts = (campo.opciones.split(',') if campo.opciones else []) %}
+                  {% if not opts and campo_options and (campo.id in campo_options) %}
+                    {% set opts = campo_options[campo.id] %}
+                  {% endif %}
+                  {% for opt in opts %}
+                    {% set o = opt.strip() if opt is string else opt %}
+                    {% set selected = false %}
+                    {% if current %}
+                      {% if current is iterable and not current is string %}
+                        {% for cval in current %}
+                          {% if (cval|string).lower() == (o|string).lower() %}
+                            {% set selected = true %}
+                          {% endif %}
+                        {% endfor %}
+                      {% else %}
+                        {% if (current|string).lower() == (o|string).lower() %}
                           {% set selected = true %}
                         {% endif %}
-                      {% endfor %}
-                    {% else %}
-                      {% if (current|string).lower() == (o|string).lower() %}
-                        {% set selected = true %}
                       {% endif %}
                     {% endif %}
-                  {% endif %}
-                  <option value="{{ o }}" {% if selected %}selected{% endif %}>{{ o }}</option>
-                {% endfor %}
-              </select>
-            {% elif campo.tipo and campo.tipo.lower() == 'date' %}
-              <input type="date" class="form-control" name="f_{{ campo.id }}" value="{{ current }}">
-            {% else %}
-              {# provide a datalist for lightweight typeahead using campo_options if available #}
-              <input class="form-control" list="dl_{{ campo.id }}" name="f_{{ campo.id }}" value="{{ current }}" placeholder="Filtrar {{ campo.nombre }}">
-              {% if campo_options and (campo.id in campo_options) and campo_options[campo.id] %}
-                <datalist id="dl_{{ campo.id }}">
-                  {% for opt in campo_options[campo.id] %}
-                    <option value="{{ opt }}"></option>
+                    <option value="{{ o }}" {% if selected %}selected{% endif %}>{{ o }}</option>
                   {% endfor %}
-                </datalist>
+                </select>
+              {% elif campo.tipo and campo.tipo.lower() == 'date' %}
+                <input type="date" class="form-control" name="f_{{ campo.id }}" value="{{ current }}">
+              {% else %}
+                {# provide a datalist for lightweight typeahead using campo_options if available #}
+                <input class="form-control" list="dl_{{ campo.id }}" name="f_{{ campo.id }}" value="{{ current }}" placeholder="Filtrar {{ campo.nombre }}">
+                {% if campo_options and (campo.id in campo_options) and campo_options[campo.id] %}
+                  <datalist id="dl_{{ campo.id }}">
+                    {% for opt in campo_options[campo.id] %}
+                      <option value="{{ opt }}"></option>
+                    {% endfor %}
+                  </datalist>
+                {% endif %}
               {% endif %}
-            {% endif %}
+            </div>
           </div>
         {% endfor %}
         <div class="col-12 col-md-2">
@@ -79,8 +101,8 @@
               <tr>
                 <td><strong>#{{ item.id }}</strong></td>
                 {% for campo in categoria.campos %}
-                  <td>
-                    {{ item.datos.get(campo.nombre, 'N/A') if item.datos else 'N/A' }}
+                  <td class="filterable-cell" data-campo-id="{{ campo.id }}" data-campo-name="{{ campo.nombre }}" data-value="{{ item.datos.get(campo.nombre, 'N/A') if item.datos else 'N/A' }}">
+                    <span class="cell-value">{{ item.datos.get(campo.nombre, 'N/A') if item.datos else 'N/A' }}</span>
                   </td>
                 {% endfor %}
                 <td><small class="text-muted">{{ item.created_at.strftime('%d/%m/%Y') }}</small></td>
@@ -97,4 +119,59 @@
 
     <a href="/agregar-item" class="btn btn-primary mt-4">+ Agregar Item</a>
   </div>
+{% endblock %}
+
+{% block scripts %}
+  {{ super() }}
+  <script>
+    document.addEventListener('DOMContentLoaded', function(){
+      document.querySelectorAll('.toggle-filter').forEach(function(btn){
+        btn.addEventListener('click', function(e){
+          var id = btn.getAttribute('data-field');
+          var node = document.getElementById('filter_' + id);
+          if(!node) return;
+          node.classList.toggle('show');
+        });
+      });
+      var toggleAll = document.getElementById('toggle-all-filters');
+      if(toggleAll){
+        toggleAll.addEventListener('click', function(){
+          var anyHidden = Array.from(document.querySelectorAll('.filter-control')).some(function(node){
+            return !node.classList.contains('show');
+          });
+          document.querySelectorAll('.filter-control').forEach(function(node){
+            node.classList.toggle('show', anyHidden);
+          });
+        });
+      }
+      // double-click on a table cell to open its filter and prefill
+      document.querySelectorAll('.filterable-cell').forEach(function(cell){
+        cell.addEventListener('dblclick', function(e){
+          var campoId = cell.getAttribute('data-campo-id');
+          var val = cell.getAttribute('data-value') || '';
+          if(!campoId || val === 'N/A') return;
+          var container = document.getElementById('filter_' + campoId);
+          if(!container) return;
+          var form = container.closest('form');
+          container.classList.add('show');
+          var select = container.querySelector('select');
+          var input = container.querySelector('input');
+          if(select){
+            Array.from(select.options).forEach(function(opt){
+              opt.selected = opt.value && opt.value.toString().toLowerCase() === val.toString().toLowerCase();
+            });
+            select.focus();
+          } else if(input){
+            input.value = val;
+            input.focus();
+          }
+          container.style.boxShadow = '0 0 8px rgba(0,123,255,0.25)';
+          setTimeout(function(){ container.style.boxShadow = ''; }, 1200);
+          if(form){
+            setTimeout(function(){ form.submit(); }, 150);
+          }
+        });
+      });
+    });
+  </script>
 {% endblock %}

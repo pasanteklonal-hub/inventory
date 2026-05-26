@@ -12,4 +12,8 @@ COPY . .
 
 EXPOSE 5000
 
+# Copy and make entrypoint executable
+RUN chmod +x /app/entrypoint.sh || true
+
+ENTRYPOINT ["/app/entrypoint.sh"]
 CMD ["gunicorn", "-b", "0.0.0.0:5000", "run:app"]

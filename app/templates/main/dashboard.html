@@ -4,59 +4,57 @@
 
 {% block content %}
   <div class="py-5">
-    <h1 class="display-5 mb-5">Bienvenido, {{ current_user.username }}</h1>
+    <h1 class="display-5 mb-4">Bienvenido, {{ current_user.username }}</h1>
+    <p class="lead text-muted mb-5">A continuación tienes las opciones de gestión agrupadas por área para acceder rápido a los flujos principales.</p>
 
     <div class="row g-4">
-      <div class="col-md-6">
-        <div class="card h-100 shadow-sm">
-          <div class="card-body text-center">
-            <p class="card-text">Registra nuevos equipos o items en el inventario.</p>
-            <a href="/agregar-item" class="btn btn-primary">Agregar Item</a>
+      <div class="col-md-4">
+        <div class="dashboard-column items shadow-sm h-100">
+          <div class="dashboard-column-header bg-white">
+            <div class="dashboard-column-title">Items</div>
+            <div class="dashboard-column-subtitle">Acciones de alta y baja de stock.</div>
+          </div>
+          <div class="dashboard-column-items">
+              <a href="/agregar-item" class="dashboard-column-item d-block">
+              Agregar Item
+            </a>
+            <a href="/consumir-item" class="dashboard-column-item d-block">
+              Consumir Item
+            </a>
           </div>
         </div>
       </div>
 
-      <div class="col-md-6">
-        <div class="card h-100 shadow-sm">
-          <div class="card-body text-center">
-            <p class="card-text">Retira o consume items del inventario.</p>
-            <a href="/consumir-item" class="btn btn-warning">Consumir Item</a>
+      <div class="col-md-4">
+        <div class="dashboard-column inventario shadow-sm h-100">
+          <div class="dashboard-column-header bg-white">
+            <div class="dashboard-column-title">Inventario</div>
+            <div class="dashboard-column-subtitle">Consulta y administra tus categorías y stock.</div>
+          </div>
+          <div class="dashboard-column-items">
+              <a href="/inventario-general" class="dashboard-column-item d-block">
+              Ver Inventario General
+            </a>
+            <a href="/equipos" class="dashboard-column-item d-block">
+              Categorías
+            </a>
           </div>
         </div>
       </div>
 
-      <div class="col-md-6">
-        <div class="card h-100 shadow-sm">
-          <div class="card-body text-center">
-            <p class="card-text">Gestiona las categorías de equipos.</p>
-            <a href="/equipos" class="btn btn-info">Categorías</a>
+      <div class="col-md-4">
+        <div class="dashboard-column reporte shadow-sm h-100">
+          <div class="dashboard-column-header bg-white">
+            <div class="dashboard-column-title">Reporte</div>
+            <div class="dashboard-column-subtitle">Accede a los reportes de actividad y movimientos.</div>
           </div>
-        </div>
-      </div>
-
-      <div class="col-md-6">
-        <div class="card h-100 shadow-sm">
-          <div class="card-body text-center">
-            <p class="card-text">Ver todos los items y filtrar por categorías.</p>
-            <a href="/inventario-general" class="btn btn-primary">Inventario General</a>
-          </div>
-        </div>
-      </div>
-
-      <div class="col-md-6">
-        <div class="card h-100 shadow-sm">
-          <div class="card-body text-center">
-            <p class="card-text">Genera un reporte de stock actual y descárgalo en XLSX.</p>
-            <a href="/reporte-semanal" class="btn btn-primary">Reporte Semanal</a>
-          </div>
-        </div>
-      </div>
-
-      <div class="col-md-6">
-        <div class="card h-100 shadow-sm">
-          <div class="card-body text-center">
-            <p class="card-text">Consulta el historial de movimientos.</p>
-            <a href="/reportes" class="btn btn-success">Reportes</a>
+          <div class="dashboard-column-items">
+            <a href="/reporte-semanal" class="dashboard-column-item d-block">
+              Reporte Semanal
+            </a>
+            <a href="/reportes" class="dashboard-column-item d-block">
+              Reporte de Movimientos
+            </a>
           </div>
         </div>
       </div>
