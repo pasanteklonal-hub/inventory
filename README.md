@@ -87,3 +87,4 @@ Notas importantes:
 
 Si prefieres usar Docker sólo para la base de datos y mantener tu entorno local, exporta
 `DATABASE_URL` apuntando al host o configura credenciales compatibles.
+# mi-inventario
