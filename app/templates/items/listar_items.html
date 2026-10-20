@@ -90,22 +90,28 @@
           <thead class="table-dark">
             <tr>
               <th>ID</th>
+              <th>Producto</th>
               {% for campo in categoria.campos %}
                 <th>{{ campo.nombre }}</th>
               {% endfor %}
               <th>Creado</th>
+              <th>Acciones</th>
             </tr>
           </thead>
           <tbody>
             {% for item in items %}
               <tr>
                 <td><strong>#{{ item.id }}</strong></td>
+                <td>{{ item.datos.get('Descripción', '-') if item.datos else '-' }}</td>
                 {% for campo in categoria.campos %}
                   <td class="filterable-cell" data-campo-id="{{ campo.id }}" data-campo-name="{{ campo.nombre }}" data-value="{{ item.datos.get(campo.nombre, 'N/A') if item.datos else 'N/A' }}">
                     <span class="cell-value">{{ item.datos.get(campo.nombre, 'N/A') if item.datos else 'N/A' }}</span>
                   </td>
                 {% endfor %}
                 <td><small class="text-muted">{{ item.created_at.strftime('%d/%m/%Y') }}</small></td>
+                <td>
+                  <a href="/editar-producto/{{ item.id }}" class="btn btn-sm btn-outline-primary">Editar producto</a>
+                </td>
               </tr>
             {% endfor %}
           </tbody>
@@ -117,7 +123,7 @@
       </div>
     {% endif %}
 
-    <a href="/agregar-item" class="btn btn-primary mt-4">+ Agregar Item</a>
+    <a href="/agregar-stock" class="btn btn-primary mt-4">+ Agregar al Stock</a>
   </div>
 {% endblock %}
 

@@ -1,0 +1,95 @@
+{% extends 'base.html' %}
+
+{% block title %}Crear Producto{% endblock %}
+
+{% block content %}
+  <div class="my-5">
+    <div class="row justify-content-center">
+      <div class="col-md-8">
+        <h2 class="mb-4">Crear producto</h2>
+        <p class="text-muted">Crea el producto una sola vez. Luego podrás agregar y consumir unidades desde su stock.</p>
+
+        <form method="get" class="card shadow-sm p-4 mb-4">
+          <div class="mb-3">
+            <label for="categoria_id" class="form-label">Primero, selecciona una categoría <span class="text-danger">*</span></label>
+            <select class="form-select" id="categoria_id" name="categoria_id" required>
+              <option value="">-- Selecciona una categoría --</option>
+              {% for categoria in categorias %}
+                <option value="{{ categoria.id }}" {% if categoria_seleccionada and categoria.id == categoria_seleccionada.id %}selected{% endif %}>{{ categoria.nombre }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="d-flex justify-content-between">
+            <a href="/" class="btn btn-secondary">Cancelar</a>
+            <button type="submit" class="btn btn-outline-primary">Continuar</button>
+          </div>
+        </form>
+
+        {% if categoria_seleccionada %}
+          <h5 class="mb-3">Datos del producto — {{ categoria_seleccionada.nombre }}</h5>
+          <form method="post" class="card shadow-sm p-4">
+            <input type="hidden" name="categoria_id" value="{{ categoria_seleccionada.id }}">
+
+            <div class="mb-3">
+              <label for="descripcion" class="form-label">Descripción del producto <span class="text-danger">*</span></label>
+              <input
+                type="text"
+                class="form-control"
+                id="descripcion"
+                name="descripcion"
+                required
+                maxlength="500"
+                placeholder="Ej: Disco SSD 480 Kingston"
+                value="{{ request.form.get('descripcion', '') }}"
+              >
+            </div>
+
+            <div class="mb-3">
+              <label for="modelo" class="form-label">Modelo</label>
+              <input
+                type="text"
+                class="form-control"
+                id="modelo"
+                name="modelo"
+                maxlength="200"
+                placeholder="Ej: SA400S37/480G"
+                value="{{ request.form.get('modelo', '') }}"
+              >
+              <div class="form-text">Número de modelo o referencia para localizar el producto al hacer futuras compras.</div>
+            </div>
+
+            {% for campo in campos %}
+              <div class="mb-3">
+                <label for="campo_{{ campo.id }}" class="form-label">{{ campo.nombre }} {% if campo.requerido %}<span class="text-danger">*</span>{% endif %}</label>
+                {% set valor = request.form.get('campo_' ~ campo.id, '') %}
+                {% if campo.tipo == 'select' %}
+                  <select class="form-select" id="campo_{{ campo.id }}" name="campo_{{ campo.id }}" {% if campo.requerido %}required{% endif %}>
+                    <option value="">-- Selecciona --</option>
+                    {% for opcion in campo.opciones.split(',') if campo.opciones %}
+                      <option value="{{ opcion.strip() }}" {% if opcion.strip() == valor %}selected{% endif %}>{{ opcion.strip() }}</option>
+                    {% endfor %}
+                  </select>
+                {% elif campo.tipo == 'textarea' %}
+                  <textarea class="form-control" id="campo_{{ campo.id }}" name="campo_{{ campo.id }}" rows="3" {% if campo.requerido %}required{% endif %}>{{ valor }}</textarea>
+                {% elif campo.tipo == 'date' %}
+                  <input type="date" class="form-control" id="campo_{{ campo.id }}" name="campo_{{ campo.id }}" value="{{ valor }}" {% if campo.requerido %}required{% endif %}>
+                {% elif campo.tipo == 'number' %}
+                  <input type="number" class="form-control" id="campo_{{ campo.id }}" name="campo_{{ campo.id }}" value="{{ valor }}" {% if campo.requerido %}required{% endif %}>
+                {% elif campo.tipo == 'email' %}
+                  <input type="email" class="form-control" id="campo_{{ campo.id }}" name="campo_{{ campo.id }}" value="{{ valor }}" {% if campo.requerido %}required{% endif %}>
+                {% else %}
+                  <input type="text" class="form-control" id="campo_{{ campo.id }}" name="campo_{{ campo.id }}" value="{{ valor }}" {% if campo.requerido %}required{% endif %}>
+                {% endif %}
+              </div>
+            {% endfor %}
+
+            <div class="d-flex justify-content-end gap-2 mt-3">
+              <a href="/" class="btn btn-secondary">Cancelar</a>
+              <button type="submit" class="btn btn-primary">Crear producto</button>
+            </div>
+          </form>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+{% endblock %}

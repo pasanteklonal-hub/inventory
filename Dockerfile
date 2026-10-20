@@ -16,4 +16,4 @@ EXPOSE 5000
 RUN chmod +x /app/entrypoint.sh || true
 
 ENTRYPOINT ["/app/entrypoint.sh"]
-CMD ["gunicorn", "-b", "0.0.0.0:5000", "run:app"]
+CMD ["gunicorn", "--workers", "2", "--threads", "4", "--timeout", "60", "-b", "0.0.0.0:5000", "run:app"]

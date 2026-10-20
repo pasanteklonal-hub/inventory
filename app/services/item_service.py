@@ -1,6 +1,7 @@
 from .. import db
 from ..models import Item, Movimiento, Categoria, Campo
 from ..dao.categoria_dao import get_active_categories
+from sqlalchemy import or_
 from datetime import datetime
 
 
@@ -31,8 +32,56 @@ def create_item(categoria_id, datos, usuario_id, cantidad=1):
     return item
 
 
+def create_product(categoria_id, descripcion, modelo, usuario_id, campos_datos=None):
+    descripcion = (descripcion or '').strip()
+    if not descripcion:
+        raise ValueError('La descripción del producto es obligatoria')
+
+    modelo = (modelo or '').strip()
+    categoria = Categoria.query.filter_by(id=categoria_id, deleted_at=None).first()
+    if not categoria:
+        raise ValueError('La categoría seleccionada no es válida')
+
+    datos = {'Descripción': descripcion, 'Modelo': modelo}
+    campos_datos = campos_datos or {}
+    campos = Campo.query.filter_by(categoria_id=categoria.id).order_by(Campo.orden, Campo.id).all()
+    for campo in campos:
+        valor = (campos_datos.get(str(campo.id)) or '').strip()
+        if campo.requerido and not valor:
+            raise ValueError(f"El campo '{campo.nombre}' es requerido")
+        if valor and campo.tipo == 'select' and campo.opciones:
+            opciones = [opcion.strip() for opcion in campo.opciones.split(',') if opcion.strip()]
+            if valor not in opciones:
+                raise ValueError(f"Selecciona una opción válida para el campo '{campo.nombre}'")
+        datos[campo.nombre] = valor
+
+    item = Item(
+        categoria_id=categoria.id,
+        datos=datos,
+        stock=0,
+    )
+    db.session.add(item)
+    db.session.flush()
+    db.session.add(Movimiento(
+        item_id=item.id,
+        usuario_id=usuario_id,
+        tipo='crear_producto',
+        cantidad=0,
+        observacion='Producto creado, pendiente de agregar stock',
+    ))
+    db.session.commit()
+    return item
+
+
 def get_item_or_404(item_id):
-    return Item.query.get_or_404(item_id)
+    return Item.query.filter_by(id=item_id, eliminado=False).first_or_404()
+
+
+def delete_product(item_id):
+    item = get_item_or_404(item_id)
+    item.eliminado = True
+    db.session.commit()
+    return item
 
 
 def update_item(item, datos, usuario_id):
@@ -50,7 +99,11 @@ def update_item(item, datos, usuario_id):
 
 
 def filter_items_by_categoria(categoria_id, filtros):
-    items_q = Item.query.filter_by(categoria_id=categoria_id, deleted_at=None).all()
+    items_q = Item.query.filter(
+        Item.categoria_id == categoria_id,
+        Item.eliminado.is_(False),
+        or_(Item.deleted_at.is_(None), Item.stock == 0),
+    ).all()
     if not filtros:
         return items_q
 
@@ -116,7 +169,8 @@ def filter_items_by_categoria(categoria_id, filtros):
 def list_items_for_consumption():
     categorias = list_categories()
     items_por_categoria = {
-        cat.id: Item.query.filter_by(categoria_id=cat.id, deleted_at=None).filter(Item.stock > 0).all()
+        cat.id: Item.query.filter_by(categoria_id=cat.id, deleted_at=None, eliminado=False)
+        .filter(Item.stock > 0).all()
         for cat in categorias
     }
     return categorias, items_por_categoria
@@ -130,16 +184,25 @@ def get_items_for_inventory(categorias, selected, mostrar_consumidos):
 
     query = Item.query
     if mostrar_consumidos:
-        query = query.filter(Item.categoria_id.in_(seleccionadas), Item.deleted_at.isnot(None))
+        query = query.filter(
+            Item.categoria_id.in_(seleccionadas),
+            Item.eliminado.is_(False),
+            Item.deleted_at.isnot(None),
+            Item.stock > 0,
+        )
     else:
-        query = query.filter(Item.deleted_at.is_(None), Item.categoria_id.in_(seleccionadas))
+        query = query.filter(
+            Item.categoria_id.in_(seleccionadas),
+            Item.eliminado.is_(False),
+            or_(Item.deleted_at.is_(None), Item.stock == 0),
+        )
 
     return query.all(), seleccionadas
 
 
 def add_stock(item_id, usuario_id, cantidad, observacion=None):
     validate_quantity(cantidad)
-    item = Item.query.get_or_404(item_id)
+    item = get_item_or_404(item_id)
     item.stock = Item.stock + cantidad
     item.deleted_at = None
     db.session.add(Movimiento(
@@ -155,7 +218,7 @@ def add_stock(item_id, usuario_id, cantidad, observacion=None):
 
 def consume_item(item_id, usuario_id, destino, observacion, cantidad=1):
     validate_quantity(cantidad)
-    item = Item.query.get_or_404(item_id)
+    item = get_item_or_404(item_id)
     updated = Item.query.filter(
         Item.id == item.id,
         Item.deleted_at.is_(None),
@@ -167,8 +230,6 @@ def consume_item(item_id, usuario_id, destino, observacion, cantidad=1):
     if not updated:
         raise ValueError('No hay stock suficiente para consumir esa cantidad')
     db.session.refresh(item)
-    if item.stock == 0:
-        item.deleted_at = db.func.now()
     movimiento = Movimiento(
         item_id=item.id,
         usuario_id=usuario_id,

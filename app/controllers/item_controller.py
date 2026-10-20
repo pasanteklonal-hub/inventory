@@ -5,8 +5,9 @@ from . import main_bp
 from ..models import Item
 from ..services.item_service import (
     list_categories,
-    create_item,
+    create_product,
     get_item_or_404,
+    delete_product,
     update_item,
     filter_items_by_categoria,
     list_items_for_consumption,
@@ -17,37 +18,49 @@ from ..services.item_service import (
 from ..services.category_service import get_categoria_or_404
 
 
-@main_bp.route('/agregar-item', methods=['GET', 'POST'])
+@main_bp.route('/agregar-producto', methods=['GET', 'POST'])
 @login_required
-def agregar_item():
+def agregar_producto():
     categorias = list_categories()
 
     if request.method == 'POST':
-        categoria_id = request.form.get('categoria_id')
-        categoria = get_categoria_or_404(categoria_id)
-
-        datos = {}
-        for campo in categoria.campos:
-            valor = request.form.get(f'campo_{campo.id}')
-            if campo.requerido and not valor:
-                flash(f"El campo '{campo.nombre}' es requerido", 'danger')
-                return redirect(url_for('main.agregar_item'))
-            datos[campo.nombre] = valor
-
+        categoria_id = request.form.get('categoria_id', type=int)
+        categoria = next((cat for cat in categorias if cat.id == categoria_id), None)
+        if not categoria:
+            flash('Selecciona una categoría válida', 'danger')
+            return render_template('items/agregar_producto.html', categorias=categorias)
+        campos = sorted(categoria.campos, key=lambda campo: (campo.orden or 0, campo.id))
         try:
-            cantidad = int(request.form.get('cantidad', '1'))
-        except (TypeError, ValueError):
-            flash('La cantidad debe ser un número entero mayor que cero', 'danger')
-            return redirect(url_for('main.agregar_item'))
-        try:
-            create_item(categoria_id, datos, current_user.id, cantidad)
+            producto = create_product(
+                categoria.id,
+                request.form.get('descripcion', ''),
+                request.form.get('modelo', ''),
+                current_user.id,
+                {
+                    str(campo.id): request.form.get(f'campo_{campo.id}', '')
+                    for campo in campos
+                },
+            )
         except ValueError as error:
             flash(str(error), 'danger')
-            return redirect(url_for('main.agregar_item'))
-        flash('Item agregado al inventario', 'success')
-        return redirect(url_for('main.agregar_item'))
+            return render_template(
+                'items/agregar_producto.html',
+                categorias=categorias,
+                categoria_seleccionada=categoria,
+                campos=campos,
+            )
+        flash('Producto creado. Ahora puedes agregarle stock.', 'success')
+        return redirect(url_for('main.agregar_item', producto_id=producto.id))
 
-    return render_template('items/agregar_item.html', categorias=categorias)
+    categoria_id = request.args.get('categoria_id', type=int)
+    categoria = next((cat for cat in categorias if cat.id == categoria_id), None)
+    campos = sorted(categoria.campos, key=lambda campo: (campo.orden or 0, campo.id)) if categoria else []
+    return render_template(
+        'items/agregar_producto.html',
+        categorias=categorias,
+        categoria_seleccionada=categoria,
+        campos=campos,
+    )
 
 
 @main_bp.route('/editar-item/<int:item_id>', methods=['GET', 'POST'])
@@ -57,7 +70,12 @@ def editar_item(item_id):
     categoria = item.categoria
 
     if request.method == 'POST':
-        datos = {}
+        campos_editables = {campo.nombre for campo in categoria.campos}
+        datos = {
+            clave: valor
+            for clave, valor in (item.datos or {}).items()
+            if clave not in campos_editables
+        }
         for campo in categoria.campos:
             valor = request.form.get(f'campo_{campo.id}')
             if campo.requerido and not valor:
@@ -70,6 +88,38 @@ def editar_item(item_id):
         return redirect(url_for('main.inventario_general'))
 
     return render_template('items/editar_item.html', item=item, categoria=categoria)
+
+
+@main_bp.route('/editar-producto/<int:item_id>', methods=['GET', 'POST'])
+@login_required
+def editar_producto(item_id):
+    item = get_item_or_404(item_id)
+
+    if request.method == 'POST':
+        descripcion = request.form.get('descripcion', '').strip()
+        if not descripcion:
+            flash('La descripción del producto es obligatoria', 'danger')
+            return redirect(url_for('main.editar_producto', item_id=item.id))
+
+        datos = dict(item.datos or {})
+        datos['Descripción'] = descripcion
+        datos['Modelo'] = request.form.get('modelo', '').strip()
+        update_item(item, datos, current_user.id)
+        flash('Producto actualizado correctamente', 'success')
+        return redirect(url_for('main.inventario_general'))
+
+    return render_template('items/editar_producto.html', item=item)
+
+
+@main_bp.route('/eliminar-producto/<int:item_id>', methods=['POST'])
+@login_required
+def eliminar_producto(item_id):
+    item = delete_product(item_id)
+    categoria_id = request.form.get('categoria_id', type=int)
+    flash(f"Producto '{(item.datos or {}).get('Descripción', f'#{item.id}')}' eliminado.", 'success')
+    if categoria_id == item.categoria_id:
+        return redirect(url_for('main.listar_items', categoria_id=categoria_id))
+    return redirect(url_for('main.inventario_general'))
 
 
 @main_bp.route('/items/<int:categoria_id>')
@@ -131,6 +181,9 @@ def consumir_item():
         item_id = request.form.get('item_id')
         destino = request.form.get('destino')
         observacion = request.form.get('observacion')
+        if not item_id or not destino or not destino.strip():
+            flash('Selecciona un producto e indica el destino', 'danger')
+            return redirect(url_for('main.consumir_item'))
         try:
             cantidad = int(request.form.get('cantidad', '1'))
         except (TypeError, ValueError):
@@ -148,35 +201,44 @@ def consumir_item():
     return render_template('items/consumir_item.html', categorias=categorias, items_por_categoria=items_por_categoria)
 
 
-@main_bp.route('/agregar-stock', methods=['GET', 'POST'])
+@main_bp.route('/agregar-item', methods=['GET', 'POST'], endpoint='agregar_item')
+@main_bp.route('/agregar-stock', methods=['GET', 'POST'], endpoint='agregar_stock')
 @login_required
 def agregar_stock():
     if request.method == 'POST':
+        item_id = request.form.get('item_id', type=int)
+        if not item_id:
+            flash('Selecciona un producto', 'danger')
+            return redirect(url_for(request.endpoint))
         try:
             cantidad = int(request.form.get('cantidad', ''))
         except (TypeError, ValueError):
             flash('La cantidad debe ser un número entero mayor que cero', 'danger')
-            return redirect(url_for('main.agregar_stock'))
+            return redirect(url_for(request.endpoint))
         try:
             add_stock(
-                request.form.get('item_id'),
+                item_id,
                 current_user.id,
                 cantidad,
                 request.form.get('observacion'),
             )
         except ValueError as error:
             flash(str(error), 'danger')
-            return redirect(url_for('main.agregar_stock'))
-        flash('Stock agregado correctamente', 'success')
-        return redirect(url_for('main.agregar_stock'))
+            return redirect(url_for(request.endpoint))
+        flash('Stock del producto actualizado correctamente', 'success')
+        return redirect(url_for(request.endpoint))
 
     categorias = list_categories()
     items_por_categoria = {
-        categoria.id: Item.query.filter_by(categoria_id=categoria.id).all()
+        categoria.id: Item.query.filter_by(categoria_id=categoria.id, eliminado=False).all()
         for categoria in categorias
     }
+    producto_id = request.args.get('producto_id', type=int)
+    producto = Item.query.filter_by(id=producto_id, eliminado=False).first() if producto_id else None
     return render_template(
         'items/agregar_stock.html',
         categorias=categorias,
         items_por_categoria=items_por_categoria,
+        producto_id=producto.id if producto else None,
+        producto_categoria_id=producto.categoria_id if producto else None,
     )

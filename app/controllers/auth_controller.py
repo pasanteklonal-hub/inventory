@@ -51,7 +51,13 @@ def registrar_usuario():
             flash(error, 'danger')
             return redirect(url_for('auth.registrar_usuario'))
 
-        flash('Usuario creado exitosamente. Por favor inicia sesión', 'success')
-        return redirect(url_for('auth.login'))
+        user = authenticate_user(username, password)
+        if user is None:
+            flash('La cuenta se creó, pero no se pudo iniciar sesión. Inicia sesión manualmente.', 'warning')
+            return redirect(url_for('auth.login'))
+
+        login_user(user)
+        flash('Usuario creado exitosamente. Has iniciado sesión.', 'success')
+        return redirect(url_for('main.index'))
 
     return render_template('auth/registrar_usuario.html')

@@ -20,16 +20,24 @@ def build_reporte_semanal(request):
     selected = request.args.getlist('categoria_id', type=int)
 
     if selected:
-        items = Item.query.filter(Item.deleted_at.is_(None), Item.categoria_id.in_(selected)).all()
+        items = Item.query.filter(
+            Item.deleted_at.is_(None),
+            Item.eliminado.is_(False),
+            Item.categoria_id.in_(selected),
+        ).all()
     else:
-        items = Item.query.filter(Item.deleted_at.is_(None)).all()
+        items = Item.query.filter(Item.deleted_at.is_(None), Item.eliminado.is_(False)).all()
         selected = [c.id for c in categorias]
 
     summary = []
     for categoria in categorias:
         if categoria.id not in selected:
             continue
-        items_categoria = Item.query.filter_by(categoria_id=categoria.id, deleted_at=None).all()
+        items_categoria = Item.query.filter_by(
+            categoria_id=categoria.id,
+            deleted_at=None,
+            eliminado=False,
+        ).all()
         summary.append({'categoria': categoria.nombre, 'stock': sum(item.stock for item in items_categoria)})
 
     return categorias, summary, items, selected
@@ -195,7 +203,7 @@ def export_inventario_json():
     categorias = Categoria.query.filter_by(deleted_at=None).all()
     out = {}
     for cat in categorias:
-        items = Item.query.filter_by(categoria_id=cat.id, deleted_at=None).all()
+        items = Item.query.filter_by(categoria_id=cat.id, deleted_at=None, eliminado=False).all()
         out[cat.nombre] = [
             {'categoria': cat.nombre, **(item.datos or {}), '__inventory_stock__': item.stock}
             for item in items

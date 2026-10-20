@@ -1,12 +1,12 @@
 {% extends 'base.html' %}
 
-{% block title %}Agregar Stock{% endblock %}
+{% block title %}Agregar al Stock{% endblock %}
 
 {% block content %}
   <div class="my-5">
     <div class="row justify-content-center">
       <div class="col-md-8">
-        <h2 class="mb-4">Agregar stock a un producto</h2>
+        <h2 class="mb-4">Agregar al stock</h2>
 
         <form method="post" class="card shadow-sm p-4">
           <div class="mb-3">
@@ -14,7 +14,7 @@
             <select class="form-select" id="categoria_id" name="categoria_id" required onchange="cargarItems()">
               <option value="">-- Selecciona una categoría --</option>
               {% for categoria in categorias %}
-                <option value="{{ categoria.id }}">{{ categoria.nombre }}</option>
+                <option value="{{ categoria.id }}" {% if categoria.id == producto_categoria_id %}selected{% endif %}>{{ categoria.nombre }}</option>
               {% endfor %}
             </select>
           </div>
@@ -27,7 +27,7 @@
           </div>
 
           <div class="mb-3">
-            <label for="cantidad" class="form-label">Cantidad a agregar <span class="text-danger">*</span></label>
+            <label for="cantidad" class="form-label">Unidades a agregar <span class="text-danger">*</span></label>
             <input type="number" class="form-control" id="cantidad" name="cantidad" value="1" min="1" step="1" required>
           </div>
 
@@ -38,7 +38,7 @@
 
           <div class="d-flex justify-content-end gap-2">
             <a href="/inventario-general" class="btn btn-secondary">Cancelar</a>
-            <button type="submit" class="btn btn-primary">Agregar stock</button>
+            <button type="submit" class="btn btn-primary">Agregar al Stock</button>
           </div>
         </form>
       </div>
@@ -65,8 +65,16 @@
         const option = document.createElement('option');
         option.value = item.id;
         option.textContent = `${item.datos ? Object.values(item.datos).join(' | ') : 'Producto #' + item.id} (Stock: ${item.stock})`;
+        if (item.id === {{ producto_id or 'null' }}) {
+          option.selected = true;
+        }
         selectItem.appendChild(option);
       });
     }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      const categoria = document.getElementById('categoria_id');
+      if (categoria.value) cargarItems();
+    });
   </script>
 {% endblock %}

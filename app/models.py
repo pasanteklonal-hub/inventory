@@ -34,7 +34,7 @@ class Categoria(db.Model):
 
     @property
     def active_items_count(self):
-        return Item.query.filter_by(categoria_id=self.id, deleted_at=None).count()
+        return Item.query.filter_by(categoria_id=self.id, deleted_at=None, eliminado=False).count()
 
     def __repr__(self):
         return f"<Categoria {self.nombre}>"
@@ -59,7 +59,8 @@ class Item(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     categoria_id = db.Column(db.Integer, db.ForeignKey('categoria.id'), nullable=False)
     datos = db.Column(db.JSON, nullable=True)  # Almacena los datos dinámicos
-    stock = db.Column(db.Integer, nullable=False, default=1)
+    stock = db.Column(db.Integer, nullable=False, default=0)
+    eliminado = db.Column(db.Boolean, nullable=False, default=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     deleted_at = db.Column(db.DateTime, nullable=True)
 
@@ -77,7 +78,13 @@ class Item(db.Model):
 
     @property
     def estado(self):
-        return 'Consumido' if self.deleted_at else 'Activo'
+        if self.eliminado:
+            return 'Eliminado'
+        if self.stock == 0:
+            return 'Sin stock'
+        if self.deleted_at:
+            return 'Consumido'
+        return 'Activo'
 
     def __repr__(self):
         return f"<Item {self.id}>"

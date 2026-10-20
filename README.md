@@ -34,13 +34,18 @@ source venv/bin/activate
 python init_db.py
 ```
 
-Al iniciar, `init_db.py` también incorpora las columnas de stock a bases de datos
+Al iniciar, `init_db.py` también incorpora las columnas de stock y eliminación lógica a bases de datos
 existentes: los productos activos parten con stock 1 y los ya consumidos con stock 0.
 
-Al crear un producto se pueden completar los campos configurados para su categoría
-y definir el stock inicial. Desde **Agregar Stock** se incrementa el saldo de un
-producto existente; desde **Consumir Item** se registra la cantidad retirada, sin
-permitir que el stock quede negativo. Las exportaciones JSON incluyen la cantidad
+Desde **Crear Producto** se registra la descripción, el modelo/referencia y la categoría del producto;
+queda disponible con stock cero para agregarle unidades desde **Agregar al Stock**.
+El nombre del producto se puede modificar con **Editar producto** desde el inventario
+o el listado de su categoría; esta edición conserva su categoría, stock y otros detalles.
+La opción **Eliminar** solicita confirmación antes de ocultar el producto del inventario;
+sus movimientos históricos se conservan.
+**Agregar al Stock** incrementa el stock de un producto existente; **Consumir Item**
+registra la cantidad retirada, sin permitir que el stock quede negativo. Al agotarse,
+el producto sigue visible en el inventario con stock cero. Las exportaciones JSON incluyen la cantidad
 en el metadato `__inventory_stock__`, que se restaura al importar; los archivos
 anteriores siguen importándose con una unidad por producto.
 

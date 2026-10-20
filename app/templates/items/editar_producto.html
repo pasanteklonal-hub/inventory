@@ -1,0 +1,70 @@
+{% extends 'base.html' %}
+
+{% block title %}Editar Producto #{{ item.id }}{% endblock %}
+
+{% block content %}
+  <div class="my-5">
+    <div class="row justify-content-center">
+      <div class="col-md-8">
+        <h2 class="mb-2">Editar producto</h2>
+        <p class="text-muted mb-4">Categoría: <strong>{{ item.categoria.nombre }}</strong> · Stock actual: <strong>{{ item.stock }}</strong></p>
+
+        <form method="post" class="card shadow-sm p-4">
+          <div class="mb-4">
+            <label for="descripcion" class="form-label">Descripción del producto <span class="text-danger">*</span></label>
+            <input
+              type="text"
+              class="form-control"
+              id="descripcion"
+              name="descripcion"
+              value="{{ item.datos.get('Descripción', '') if item.datos else '' }}"
+              maxlength="500"
+              required
+            >
+          </div>
+
+          <div class="mb-4">
+            <label for="modelo" class="form-label">Modelo</label>
+            <input
+              type="text"
+              class="form-control"
+              id="modelo"
+              name="modelo"
+              value="{{ item.datos.get('Modelo', '') if item.datos else '' }}"
+              maxlength="200"
+            >
+          </div>
+
+          <div class="d-flex justify-content-between align-items-center">
+            <div>
+              <button type="button" class="btn btn-outline-danger" data-bs-toggle="modal" data-bs-target="#eliminarProducto">Eliminar producto</button>
+            </div>
+            <div class="d-flex gap-2">
+              <a href="/inventario-general" class="btn btn-secondary">Cancelar</a>
+              <button type="submit" class="btn btn-primary">Guardar cambios</button>
+            </div>
+          </div>
+        </form>
+        <div class="modal fade" id="eliminarProducto" tabindex="-1" aria-labelledby="tituloEliminarProducto" aria-hidden="true">
+          <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+              <div class="modal-header">
+                <h5 class="modal-title" id="tituloEliminarProducto">Confirmar eliminación</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+              </div>
+              <div class="modal-body">
+                ¿Desea confirmar eliminar el producto «<strong>{{ (item.datos or {}).get('Descripción', 'Producto #' ~ item.id) }}</strong>»?
+              </div>
+              <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <form method="post" action="{{ url_for('main.eliminar_producto', item_id=item.id) }}">
+                  <button type="submit" class="btn btn-danger">Sí</button>
+                </form>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+{% endblock %}

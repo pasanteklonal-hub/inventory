@@ -7,17 +7,18 @@ app = create_app()
 
 def migrate_stock_columns():
     migrations = {
-        'item': ('stock', 'INTEGER NOT NULL DEFAULT 1'),
-        'movimiento': ('cantidad', 'INTEGER NOT NULL DEFAULT 1'),
+        ('item', 'stock'): 'INTEGER NOT NULL DEFAULT 1',
+        ('item', 'eliminado'): 'BOOLEAN NOT NULL DEFAULT FALSE',
+        ('movimiento', 'cantidad'): 'INTEGER NOT NULL DEFAULT 1',
     }
     inspector = inspect(db.engine)
-    for table_name, (column_name, column_type) in migrations.items():
+    for (table_name, column_name), column_type in migrations.items():
         columns = {column['name'] for column in inspector.get_columns(table_name)}
         if column_name not in columns:
             db.session.execute(text(
                 f'ALTER TABLE {table_name} ADD COLUMN {column_name} {column_type}'
             ))
-            if table_name == 'item':
+            if table_name == 'item' and column_name == 'stock':
                 db.session.execute(text(
                     'UPDATE item SET stock = 0 WHERE deleted_at IS NOT NULL'
                 ))

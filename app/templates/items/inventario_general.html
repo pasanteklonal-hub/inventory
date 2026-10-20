@@ -79,10 +79,13 @@
                 <td>{{ item.stock }}</td>
                 <td><small class="text-muted">{{ item.created_at.strftime('%d/%m/%Y %H:%M') }}</small></td>
                 <td>
-                  <span class="badge bg-{{ 'warning' if item.deleted_at else 'success' }}">{{ item.estado }}</span>
+                  <span class="badge bg-{{ 'warning' if item.deleted_at else 'secondary' if item.stock == 0 else 'success' }}">{{ item.estado }}</span>
                 </td>
                 <td>
-                  <a href="/editar-item/{{ item.id }}" class="btn btn-sm btn-outline-primary">Editar</a>
+                  <div class="d-flex gap-1">
+                    <a href="/editar-producto/{{ item.id }}" class="btn btn-sm btn-outline-primary">Editar producto</a>
+                    <a href="/editar-item/{{ item.id }}" class="btn btn-sm btn-outline-secondary">Detalles</a>
+                  </div>
                 </td>
               </tr>
             {% endfor %}

@@ -1,6 +1,13 @@
 from app.models import Categoria, Campo, Item
 from app import db
-from app.services.item_service import filter_items_by_categoria, create_item, consume_item, add_stock
+from app.services.item_service import (
+    filter_items_by_categoria,
+    get_items_for_inventory,
+    create_item,
+    create_product,
+    consume_item,
+    add_stock,
+)
 from datetime import datetime
 
 
@@ -58,8 +65,11 @@ def test_consume_item_and_create(app):
     assert item.id is not None
 
     consumed = consume_item(item.id, usuario_id=1, destino='Bodega', observacion='Prueba')
-    assert consumed.deleted_at is not None
+    assert consumed.deleted_at is None
     assert consumed.stock == 0
+    assert consumed.estado == 'Sin stock'
+    inventory_items, _ = get_items_for_inventory([cat], [], mostrar_consumidos=False)
+    assert any(inventory_item.id == item.id for inventory_item in inventory_items)
 
 
 def test_stock_can_be_added_and_consumed_in_quantities(app):
@@ -86,8 +96,28 @@ def test_stock_can_be_added_and_consumed_in_quantities(app):
 
     consume_item(item.id, usuario_id=1, destino='Taller', observacion='', cantidad=2)
     assert item.stock == 0
-    assert item.deleted_at is not None
+    assert item.deleted_at is None
+    inventory_items, _ = get_items_for_inventory([cat], [], mostrar_consumidos=False)
+    assert any(inventory_item.id == item.id for inventory_item in inventory_items)
 
     add_stock(item.id, usuario_id=1, cantidad=4)
     assert item.stock == 4
     assert item.deleted_at is None
+
+
+def test_create_product_starts_without_stock(app):
+    cat = Categoria(nombre='New product test')
+    db.session.add(cat)
+    db.session.commit()
+
+    product = create_product(cat.id, 'Disco SSD 480 Kingston', 'SA400S37/480G', usuario_id=1)
+
+    assert product.datos == {
+        'Descripción': 'Disco SSD 480 Kingston',
+        'Modelo': 'SA400S37/480G',
+    }
+    assert product.stock == 0
+    assert product.estado == 'Sin stock'
+    add_stock(product.id, usuario_id=1, cantidad=3)
+    assert product.stock == 3
+    assert product.deleted_at is None
