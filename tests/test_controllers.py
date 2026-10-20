@@ -149,6 +149,11 @@ def test_delete_product_requires_post_and_hides_product(client, app):
     assert Movimiento.query.filter_by(id=movimiento_id).count() == 1
     assert response.get_data(as_text=True).count('Producto de prueba para eliminar') == 1
 
+    response = client.get('/reportes')
+    assert response.status_code == 200
+    assert 'eliminar_producto' in response.get_data(as_text=True)
+    assert 'Producto eliminado del inventario' in response.get_data(as_text=True)
+
 
 def setup_user(username='testuser'):
     u = Usuario(username=username, email=f'{username}@example.com')

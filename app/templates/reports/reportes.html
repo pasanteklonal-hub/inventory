@@ -30,6 +30,8 @@
                     <span class="badge bg-success">{{ mov.tipo }}</span>
                   {% elif mov.tipo == 'consumir' %}
                     <span class="badge bg-danger">{{ mov.tipo }}</span>
+                  {% elif mov.tipo == 'eliminar_producto' %}
+                    <span class="badge bg-danger">{{ mov.tipo }}</span>
                   {% else %}
                     <span class="badge bg-secondary">{{ mov.tipo }}</span>
                   {% endif %}

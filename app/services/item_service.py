@@ -77,9 +77,16 @@ def get_item_or_404(item_id):
     return Item.query.filter_by(id=item_id, eliminado=False).first_or_404()
 
 
-def delete_product(item_id):
+def delete_product(item_id, usuario_id):
     item = get_item_or_404(item_id)
     item.eliminado = True
+    db.session.add(Movimiento(
+        item_id=item.id,
+        usuario_id=usuario_id,
+        tipo='eliminar_producto',
+        cantidad=0,
+        observacion='Producto eliminado del inventario',
+    ))
     db.session.commit()
     return item
 

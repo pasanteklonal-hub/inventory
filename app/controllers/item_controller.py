@@ -114,7 +114,7 @@ def editar_producto(item_id):
 @main_bp.route('/eliminar-producto/<int:item_id>', methods=['POST'])
 @login_required
 def eliminar_producto(item_id):
-    item = delete_product(item_id)
+    item = delete_product(item_id, current_user.id)
     categoria_id = request.form.get('categoria_id', type=int)
     flash(f"Producto '{(item.datos or {}).get('Descripción', f'#{item.id}')}' eliminado.", 'success')
     if categoria_id == item.categoria_id:
