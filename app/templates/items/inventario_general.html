@@ -53,6 +53,7 @@
               <th>Serie</th>
               <th>Categoría</th>
               <th>Datos</th>
+              <th>Stock</th>
               <th>Creado</th>
               <th>Estado</th>
               <th>Acciones</th>
@@ -75,6 +76,7 @@
                     <small class="text-muted">Sin datos</small>
                   {% endif %}
                 </td>
+                <td>{{ item.stock }}</td>
                 <td><small class="text-muted">{{ item.created_at.strftime('%d/%m/%Y %H:%M') }}</small></td>
                 <td>
                   <span class="badge bg-{{ 'warning' if item.deleted_at else 'success' }}">{{ item.estado }}</span>

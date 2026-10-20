@@ -15,6 +15,7 @@
               <th>Usuario</th>
               <th>Tipo</th>
               <th>Item ID</th>
+              <th>Cantidad</th>
               <th>Destino</th>
               <th>Observación</th>
             </tr>
@@ -34,6 +35,7 @@
                   {% endif %}
                 </td>
                 <td>#{{ mov.item_id }}</td>
+                <td>{{ mov.cantidad }}</td>
                 <td>{{ mov.destino or '-' }}</td>
                 <td><small class="text-muted">{{ mov.observacion or '-' }}</small></td>
               </tr>

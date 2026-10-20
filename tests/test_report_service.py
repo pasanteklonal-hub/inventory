@@ -19,7 +19,7 @@ def test_report_exports(app):
     Campo(categoria_id=c.id, nombre='Name', tipo='text')
     db.session.commit()
 
-    it = Item(categoria_id=c.id, datos={'Name': 'X'})
+    it = Item(categoria_id=c.id, datos={'Name': 'X'}, stock=5)
     db.session.add(it)
     db.session.commit()
 
@@ -27,6 +27,7 @@ def test_report_exports(app):
     with app.test_request_context('/reporte-semanal'):
         categorias, summary, items, selected = build_reporte_semanal(request)
         assert isinstance(summary, list)
+        assert next(row['stock'] for row in summary if row['categoria'] == 'RepCat') == 5
 
         # xlsx
         resp_xlsx = export_reporte_semanal_xlsx(summary, items)
@@ -53,3 +54,4 @@ def test_report_exports(app):
         parsed = json.loads(content.decode('utf-8'))
         assert isinstance(parsed, dict)
         assert 'RepCat' in parsed
+        assert parsed['RepCat'][0]['__inventory_stock__'] == 5

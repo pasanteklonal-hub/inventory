@@ -2,6 +2,7 @@ from flask import render_template, request, redirect, url_for, flash
 from flask_login import login_required, current_user
 
 from . import main_bp
+from ..models import Item
 from ..services.item_service import (
     list_categories,
     create_item,
@@ -10,6 +11,7 @@ from ..services.item_service import (
     filter_items_by_categoria,
     list_items_for_consumption,
     consume_item,
+    add_stock,
     get_items_for_inventory,
 )
 from ..services.category_service import get_categoria_or_404
@@ -32,7 +34,16 @@ def agregar_item():
                 return redirect(url_for('main.agregar_item'))
             datos[campo.nombre] = valor
 
-        create_item(categoria_id, datos, current_user.id)
+        try:
+            cantidad = int(request.form.get('cantidad', '1'))
+        except (TypeError, ValueError):
+            flash('La cantidad debe ser un número entero mayor que cero', 'danger')
+            return redirect(url_for('main.agregar_item'))
+        try:
+            create_item(categoria_id, datos, current_user.id, cantidad)
+        except ValueError as error:
+            flash(str(error), 'danger')
+            return redirect(url_for('main.agregar_item'))
         flash('Item agregado al inventario', 'success')
         return redirect(url_for('main.agregar_item'))
 
@@ -120,9 +131,52 @@ def consumir_item():
         item_id = request.form.get('item_id')
         destino = request.form.get('destino')
         observacion = request.form.get('observacion')
-        consume_item(item_id, current_user.id, destino, observacion)
+        try:
+            cantidad = int(request.form.get('cantidad', '1'))
+        except (TypeError, ValueError):
+            flash('La cantidad debe ser un número entero mayor que cero', 'danger')
+            return redirect(url_for('main.consumir_item'))
+        try:
+            consume_item(item_id, current_user.id, destino, observacion, cantidad)
+        except ValueError as error:
+            flash(str(error), 'danger')
+            return redirect(url_for('main.consumir_item'))
         flash('Item consumido / retirado del inventario', 'success')
         return redirect(url_for('main.consumir_item'))
 
     categorias, items_por_categoria = list_items_for_consumption()
     return render_template('items/consumir_item.html', categorias=categorias, items_por_categoria=items_por_categoria)
+
+
+@main_bp.route('/agregar-stock', methods=['GET', 'POST'])
+@login_required
+def agregar_stock():
+    if request.method == 'POST':
+        try:
+            cantidad = int(request.form.get('cantidad', ''))
+        except (TypeError, ValueError):
+            flash('La cantidad debe ser un número entero mayor que cero', 'danger')
+            return redirect(url_for('main.agregar_stock'))
+        try:
+            add_stock(
+                request.form.get('item_id'),
+                current_user.id,
+                cantidad,
+                request.form.get('observacion'),
+            )
+        except ValueError as error:
+            flash(str(error), 'danger')
+            return redirect(url_for('main.agregar_stock'))
+        flash('Stock agregado correctamente', 'success')
+        return redirect(url_for('main.agregar_stock'))
+
+    categorias = list_categories()
+    items_por_categoria = {
+        categoria.id: Item.query.filter_by(categoria_id=categoria.id).all()
+        for categoria in categorias
+    }
+    return render_template(
+        'items/agregar_stock.html',
+        categorias=categorias,
+        items_por_categoria=items_por_categoria,
+    )

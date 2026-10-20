@@ -1,6 +1,6 @@
 from app.models import Categoria, Campo, Item
 from app import db
-from app.services.item_service import filter_items_by_categoria, create_item, consume_item
+from app.services.item_service import filter_items_by_categoria, create_item, consume_item, add_stock
 from datetime import datetime
 
 
@@ -59,3 +59,35 @@ def test_consume_item_and_create(app):
 
     consumed = consume_item(item.id, usuario_id=1, destino='Bodega', observacion='Prueba')
     assert consumed.deleted_at is not None
+    assert consumed.stock == 0
+
+
+def test_stock_can_be_added_and_consumed_in_quantities(app):
+    cat = Categoria(nombre='Stock quantity test')
+    db.session.add(cat)
+    db.session.commit()
+
+    item = create_item(cat.id, {'Producto': 'Tornillo'}, usuario_id=1, cantidad=5)
+    assert item.stock == 5
+
+    add_stock(item.id, usuario_id=1, cantidad=3, observacion='Reposición')
+    assert item.stock == 8
+
+    consume_item(item.id, usuario_id=1, destino='Taller', observacion='', cantidad=6)
+    assert item.stock == 2
+    assert item.deleted_at is None
+
+    try:
+        consume_item(item.id, usuario_id=1, destino='Taller', observacion='', cantidad=3)
+        assert False, 'No se debe permitir consumir más stock del disponible'
+    except ValueError as error:
+        assert 'stock suficiente' in str(error)
+    assert item.stock == 2
+
+    consume_item(item.id, usuario_id=1, destino='Taller', observacion='', cantidad=2)
+    assert item.stock == 0
+    assert item.deleted_at is not None
+
+    add_stock(item.id, usuario_id=1, cantidad=4)
+    assert item.stock == 4
+    assert item.deleted_at is None

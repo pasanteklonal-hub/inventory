@@ -12,7 +12,10 @@ def create_app():
     app = Flask(__name__)
 
     # Database configuration (use DATABASE_URL environment variable for Postgres)
-    app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL', 'sqlite:///dev.db')
+    database_url = os.getenv('DATABASE_URL', 'sqlite:///dev.db')
+    if database_url.startswith(('postgres://', 'postgresql://')):
+        database_url = 'postgresql+psycopg2://' + database_url.split('://', 1)[1]
+    app.config['SQLALCHEMY_DATABASE_URI'] = database_url
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
     app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'dev-secret-key-change-in-production')
 

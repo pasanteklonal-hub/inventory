@@ -12,6 +12,7 @@ from openpyxl.styles import Font, Alignment
 
 from ..models import Categoria, Campo, Item, Movimiento
 from .. import db
+from .item_service import validate_quantity
 
 
 def build_reporte_semanal(request):
@@ -28,8 +29,8 @@ def build_reporte_semanal(request):
     for categoria in categorias:
         if categoria.id not in selected:
             continue
-        count = Item.query.filter_by(categoria_id=categoria.id, deleted_at=None).count()
-        summary.append({'categoria': categoria.nombre, 'stock': count})
+        items_categoria = Item.query.filter_by(categoria_id=categoria.id, deleted_at=None).all()
+        summary.append({'categoria': categoria.nombre, 'stock': sum(item.stock for item in items_categoria)})
 
     return categorias, summary, items, selected
 
@@ -60,7 +61,7 @@ def export_reporte_semanal_xlsx(summary, items):
     ws.append([])
     ws.append(['Detalle de Items'])
     ws['A' + str(ws.max_row)].font = title_font
-    ws.append(['ID', 'Número de Serie', 'Categoría', 'Datos', 'Creado'])
+    ws.append(['ID', 'Número de Serie', 'Categoría', 'Datos', 'Stock', 'Creado'])
     for cell in ws[ws.max_row]:
         cell.font = title_font
         cell.alignment = center
@@ -71,11 +72,12 @@ def export_reporte_semanal_xlsx(summary, items):
             item.serial,
             item.categoria.nombre,
             datos_texto,
+            item.stock,
             item.created_at.strftime('%d/%m/%Y %H:%M'),
         ])
-        for col in range(1, 6):
+        for col in range(1, 7):
             ws.cell(row=ws.max_row, column=col).font = data_font
-            if col != 5:
+            if col != 6:
                 ws.cell(row=ws.max_row, column=col).alignment = Alignment(wrap_text=True, vertical='top')
 
     for column_cells in ws.columns:
@@ -147,7 +149,7 @@ def export_reporte_semanal_pdf(summary, items):
     elements.append(Spacer(1, 20))
 
     elements.append(Paragraph('Detalle de Items', styles['ReportSubtitle']))
-    items_data = [['ID', 'Serie', 'Categoría', 'Datos', 'Creado']]
+    items_data = [['ID', 'Serie', 'Categoría', 'Datos', 'Stock', 'Creado']]
     for item in items:
         datos_texto = '<br/>'.join(f'{k}: {v}' for k, v in (item.datos or {}).items())
         items_data.append([
@@ -155,10 +157,11 @@ def export_reporte_semanal_pdf(summary, items):
             Paragraph(str(item.serial or '-'), styles['ReportNormal']),
             Paragraph(item.categoria.nombre, styles['ReportNormal']),
             Paragraph(datos_texto or 'Sin datos', styles['ReportNormal']),
+            Paragraph(str(item.stock), styles['ReportNormal']),
             Paragraph(item.created_at.strftime('%d/%m/%Y %H:%M'), styles['ReportNormal']),
         ])
 
-    col_widths = [0.5 * inch, 1.0 * inch, 1.5 * inch, 3.0 * inch, 1.3 * inch]
+    col_widths = [0.45 * inch, 0.85 * inch, 1.2 * inch, 2.7 * inch, 0.55 * inch, 1.2 * inch]
     items_table = LongTable(items_data, colWidths=col_widths, repeatRows=1, splitByRow=1)
     items_table.setStyle(TableStyle([
         ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#4f81bd')),
@@ -194,7 +197,7 @@ def export_inventario_json():
     for cat in categorias:
         items = Item.query.filter_by(categoria_id=cat.id, deleted_at=None).all()
         out[cat.nombre] = [
-            {'categoria': cat.nombre, **(item.datos or {})}
+            {'categoria': cat.nombre, **(item.datos or {}), '__inventory_stock__': item.stock}
             for item in items
         ]
 
@@ -232,11 +235,25 @@ def import_inventario_json(request):
         flash(f'Error leyendo JSON: {e}', 'danger')
         return redirect(url_for('main.importar_json'))
 
+    try:
+        stock_by_category = {
+            categoria_name: [
+                validate_quantity(item.get('__inventory_stock__', 1))
+                for item in items
+            ]
+            for categoria_name, items in data.items()
+        }
+    except (AttributeError, TypeError, ValueError) as error:
+        from flask import flash, redirect, url_for
+        flash(f'Archivo JSON inválido: cantidad de stock incorrecta ({error})', 'danger')
+        return redirect(url_for('main.importar_json'))
+
     Movimiento.query.delete()
     Item.query.delete()
     Campo.query.delete()
     Categoria.query.delete()
     db.session.commit()
+    db.session.expire_all()
 
     for categoria_name, items in data.items():
         categoria = Categoria(nombre=categoria_name, descripcion='Importada desde JSON (UI)')
@@ -246,7 +263,7 @@ def import_inventario_json(request):
         campos_nombres = []
         for it in items:
             for k in it.keys():
-                if k.strip().lower() == 'categoria':
+                if k.strip().lower() == 'categoria' or k == '__inventory_stock__':
                     continue
                 if k not in campos_nombres:
                     campos_nombres.append(k)
@@ -261,9 +278,12 @@ def import_inventario_json(request):
             )
             db.session.add(campo)
 
-        for it in items:
-            item_data = {k: v for k, v in it.items() if k.strip().lower() != 'categoria'}
-            item = Item(categoria_id=categoria.id, datos=item_data)
+        for it, stock in zip(items, stock_by_category[categoria_name]):
+            item_data = {
+                k: v for k, v in it.items()
+                if k.strip().lower() != 'categoria' and k != '__inventory_stock__'
+            }
+            item = Item(categoria_id=categoria.id, datos=item_data, stock=stock)
             db.session.add(item)
 
     db.session.commit()

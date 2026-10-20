@@ -59,6 +59,7 @@ class Item(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     categoria_id = db.Column(db.Integer, db.ForeignKey('categoria.id'), nullable=False)
     datos = db.Column(db.JSON, nullable=True)  # Almacena los datos dinámicos
+    stock = db.Column(db.Integer, nullable=False, default=1)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     deleted_at = db.Column(db.DateTime, nullable=True)
 
@@ -87,6 +88,7 @@ class Movimiento(db.Model):
     item_id = db.Column(db.Integer, db.ForeignKey('item.id'), nullable=False)
     usuario_id = db.Column(db.Integer, db.ForeignKey('usuario.id'), nullable=False)
     tipo = db.Column(db.String(50), nullable=False)  # agregar, consumir
+    cantidad = db.Column(db.Integer, nullable=False, default=1)
     destino = db.Column(db.String(200), nullable=True)
     observacion = db.Column(db.Text, nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)

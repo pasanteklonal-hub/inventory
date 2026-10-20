@@ -23,6 +23,11 @@
             <!-- Los campos se cargarán aquí dinámicamente -->
           </div>
 
+          <div class="mb-3">
+            <label for="cantidad" class="form-label">Stock inicial <span class="text-danger">*</span></label>
+            <input type="number" class="form-control" id="cantidad" name="cantidad" value="1" min="1" step="1" required>
+          </div>
+
           <div class="d-grid gap-2 d-md-flex justify-content-md-end mt-4">
             <a href="/" class="btn btn-secondary">Cancelar</a>
             <button type="submit" class="btn btn-primary">Guardar Item</button>

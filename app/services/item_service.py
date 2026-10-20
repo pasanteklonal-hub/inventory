@@ -8,14 +8,22 @@ def list_categories():
     return get_active_categories()
 
 
-def create_item(categoria_id, datos, usuario_id):
-    item = Item(categoria_id=categoria_id, datos=datos)
+def validate_quantity(cantidad):
+    if isinstance(cantidad, bool) or not isinstance(cantidad, int) or cantidad < 1:
+        raise ValueError('La cantidad debe ser un número entero mayor que cero')
+    return cantidad
+
+
+def create_item(categoria_id, datos, usuario_id, cantidad=1):
+    validate_quantity(cantidad)
+    item = Item(categoria_id=categoria_id, datos=datos, stock=cantidad)
     db.session.add(item)
     db.session.flush()
     movimiento = Movimiento(
         item_id=item.id,
         usuario_id=usuario_id,
         tipo='agregar',
+        cantidad=cantidad,
         observacion='Item agregado al inventario',
     )
     db.session.add(movimiento)
@@ -108,7 +116,7 @@ def filter_items_by_categoria(categoria_id, filtros):
 def list_items_for_consumption():
     categorias = list_categories()
     items_por_categoria = {
-        cat.id: Item.query.filter_by(categoria_id=cat.id, deleted_at=None).all()
+        cat.id: Item.query.filter_by(categoria_id=cat.id, deleted_at=None).filter(Item.stock > 0).all()
         for cat in categorias
     }
     return categorias, items_por_categoria
@@ -129,13 +137,43 @@ def get_items_for_inventory(categorias, selected, mostrar_consumidos):
     return query.all(), seleccionadas
 
 
-def consume_item(item_id, usuario_id, destino, observacion):
+def add_stock(item_id, usuario_id, cantidad, observacion=None):
+    validate_quantity(cantidad)
     item = Item.query.get_or_404(item_id)
-    item.deleted_at = db.func.now()
+    item.stock = Item.stock + cantidad
+    item.deleted_at = None
+    db.session.add(Movimiento(
+        item_id=item.id,
+        usuario_id=usuario_id,
+        tipo='agregar',
+        cantidad=cantidad,
+        observacion=observacion or 'Stock agregado',
+    ))
+    db.session.commit()
+    return item
+
+
+def consume_item(item_id, usuario_id, destino, observacion, cantidad=1):
+    validate_quantity(cantidad)
+    item = Item.query.get_or_404(item_id)
+    updated = Item.query.filter(
+        Item.id == item.id,
+        Item.deleted_at.is_(None),
+        Item.stock >= cantidad,
+    ).update(
+        {Item.stock: Item.stock - cantidad},
+        synchronize_session=False,
+    )
+    if not updated:
+        raise ValueError('No hay stock suficiente para consumir esa cantidad')
+    db.session.refresh(item)
+    if item.stock == 0:
+        item.deleted_at = db.func.now()
     movimiento = Movimiento(
         item_id=item.id,
         usuario_id=usuario_id,
         tipo='consumir',
+        cantidad=cantidad,
         destino=destino,
         observacion=observacion,
     )

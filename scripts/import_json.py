@@ -3,6 +3,7 @@ import json
 import sys
 from app import create_app, db
 from app.models import Categoria, Campo, Item, Movimiento
+from app.services.item_service import validate_quantity
 
 
 def import_from_file(path, dry_run=False):
@@ -18,6 +19,18 @@ def import_from_file(path, dry_run=False):
         if dry_run:
             print(f"Dry run: se parsearon {len(data)} categorías")
             return 0
+
+        try:
+            stock_by_category = {
+                categoria_name: [
+                    validate_quantity(item.get('__inventory_stock__', 1))
+                    for item in items
+                ]
+                for categoria_name, items in data.items()
+            }
+        except (AttributeError, TypeError, ValueError) as error:
+            print(f"Cantidad de stock incorrecta en JSON: {error}")
+            return 2
 
         # Borrar datos existentes (movimientos -> items -> campos -> categorias)
         # Nota: esta importación está pensada para poblar la base eliminando datos de prueba.
@@ -39,7 +52,7 @@ def import_from_file(path, dry_run=False):
             campos_nombres = []
             for it in items:
                 for k in it.keys():
-                    if k.strip().lower() == 'categoria':
+                    if k.strip().lower() == 'categoria' or k == '__inventory_stock__':
                         continue
                     if k not in campos_nombres:
                         campos_nombres.append(k)
@@ -48,9 +61,12 @@ def import_from_file(path, dry_run=False):
                 campo = Campo(categoria_id=categoria.id, nombre=nombre, tipo='text', requerido=False, orden=idx)
                 db.session.add(campo)
 
-            for it in items:
-                item_data = {k: v for k, v in it.items() if k.strip().lower() != 'categoria'}
-                item = Item(categoria_id=categoria.id, datos=item_data)
+            for it, stock in zip(items, stock_by_category[categoria_name]):
+                item_data = {
+                    k: v for k, v in it.items()
+                    if k.strip().lower() != 'categoria' and k != '__inventory_stock__'
+                }
+                item = Item(categoria_id=categoria.id, datos=item_data, stock=stock)
                 db.session.add(item)
 
         db.session.commit()

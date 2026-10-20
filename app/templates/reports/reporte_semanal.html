@@ -66,6 +66,7 @@
             <th>Serie</th>
             <th>Categoría</th>
             <th>Datos</th>
+            <th>Stock</th>
             <th>Creado</th>
           </tr>
         </thead>
@@ -86,6 +87,7 @@
                   <small class="text-muted">Sin datos</small>
                 {% endif %}
               </td>
+              <td>{{ item.stock }}</td>
               <td><small class="text-muted">{{ item.created_at.strftime('%d/%m/%Y %H:%M') }}</small></td>
             </tr>
           {% endfor %}

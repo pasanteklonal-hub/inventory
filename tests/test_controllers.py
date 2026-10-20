@@ -40,12 +40,18 @@ def test_full_controller_flow(client, app):
     assert campo is not None
 
     # agregar item
-    rv = client.post('/agregar-item', data={'categoria_id': str(cat.id), f'campo_{campo.id}': 'Valor1'}, follow_redirects=True)
+    rv = client.post('/agregar-item', data={
+        'categoria_id': str(cat.id),
+        f'campo_{campo.id}': 'Valor1',
+        'cantidad': '4',
+    }, follow_redirects=True)
     text = rv.get_data(as_text=True)
     assert 'Item agregado' in text or rv.status_code == 200
 
     item = Item.query.filter_by(categoria_id=cat.id).first()
     assert item is not None
+    assert item.datos['Campo1'] == 'Valor1'
+    assert item.stock == 4
 
     # editar item
     rv = client.post(f'/editar-item/{item.id}', data={f'campo_{campo.id}': 'Nuevo'}, follow_redirects=True)
@@ -66,6 +72,17 @@ def test_full_controller_flow(client, app):
     rv = client.post('/consumir-item', data={'item_id': item.id, 'destino': 'X', 'observacion': 'test'}, follow_redirects=True)
     text = rv.get_data(as_text=True)
     assert 'Item consumido' in text or rv.status_code == 200
+    assert item.stock == 3
+
+    rv = client.post('/agregar-stock', data={
+        'categoria_id': cat.id,
+        'item_id': item.id,
+        'cantidad': '2',
+        'observacion': 'Reposición',
+    }, follow_redirects=True)
+    assert rv.status_code == 200
+    assert item.stock == 5
+    assert item.deleted_at is None
 
     # exportar json
     rv = client.get('/exportar-json')
@@ -74,9 +91,18 @@ def test_full_controller_flow(client, app):
 
     # importar json: create a small file
     import io, json
-    payload = {'ImportCat': [{'categoria': 'ImportCat', 'Field': 'V'}]}
+    payload = {'ImportCat': [{
+        'categoria': 'ImportCat',
+        'Field': 'V',
+        '__inventory_stock__': 7,
+    }]}
     bio = io.BytesIO(json.dumps(payload).encode('utf-8'))
     bio.name = 'import.json'
     rv = client.post('/importar-json', data={'file': (bio, 'import.json')}, follow_redirects=True)
     assert rv.status_code == 200
-
+    imported_category_id = Categoria.query.filter_by(nombre='ImportCat').first().id
+    imported = db.session.execute(
+        db.select(Item.stock, Item.datos).where(Item.categoria_id == imported_category_id)
+    ).first()
+    assert imported.stock == 7
+    assert imported.datos == {'Field': 'V'}

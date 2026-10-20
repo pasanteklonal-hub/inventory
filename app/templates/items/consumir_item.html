@@ -27,6 +27,11 @@
           </div>
 
           <div class="mb-3">
+            <label for="cantidad" class="form-label">Cantidad a consumir <span class="text-danger">*</span></label>
+            <input type="number" class="form-control" id="cantidad" name="cantidad" value="1" min="1" step="1" required>
+          </div>
+
+          <div class="mb-3">
             <label for="destino" class="form-label">Destino <span class="text-danger">*</span></label>
             <input type="text" class="form-control" id="destino" name="destino" required placeholder="Ej: Oficina A, Técnico Juan, Taller">
           </div>
@@ -57,7 +62,7 @@
         {% for cat_id, items_list in items_por_categoria.items() %}
           {{ cat_id }}: [
             {% for item in items_list %}
-              { id: {{ item.id }}, datos: {{ item.datos | tojson }} },
+              { id: {{ item.id }}, datos: {{ item.datos | tojson }}, stock: {{ item.stock }} },
             {% endfor %}
           ],
         {% endfor %}
@@ -68,7 +73,7 @@
           const datos = item.datos ? Object.values(item.datos).join(' | ') : 'Item #' + item.id;
           const option = document.createElement('option');
           option.value = item.id;
-          option.textContent = datos;
+          option.textContent = `${datos} (Stock: ${item.stock})`;
           selectItem.appendChild(option);
         });
       }

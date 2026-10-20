@@ -34,6 +34,16 @@ source venv/bin/activate
 python init_db.py
 ```
 
+Al iniciar, `init_db.py` también incorpora las columnas de stock a bases de datos
+existentes: los productos activos parten con stock 1 y los ya consumidos con stock 0.
+
+Al crear un producto se pueden completar los campos configurados para su categoría
+y definir el stock inicial. Desde **Agregar Stock** se incrementa el saldo de un
+producto existente; desde **Consumir Item** se registra la cantidad retirada, sin
+permitir que el stock quede negativo. Las exportaciones JSON incluyen la cantidad
+en el metadato `__inventory_stock__`, que se restaura al importar; los archivos
+anteriores siguen importándose con una unidad por producto.
+
 Si no se define `DATABASE_URL`, la app usará `sqlite:///dev.db` por defecto.
 
 Docker
