@@ -36,6 +36,10 @@ class Categoria(db.Model):
     def active_items_count(self):
         return Item.query.filter_by(categoria_id=self.id, deleted_at=None, eliminado=False).count()
 
+    @property
+    def has_products(self):
+        return db.session.query(Item.id).filter_by(categoria_id=self.id).first() is not None
+
     def __repr__(self):
         return f"<Categoria {self.nombre}>"
 

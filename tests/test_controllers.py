@@ -67,7 +67,9 @@ def test_create_product_uses_selected_category_fields(client, app):
     page = response.get_data(as_text=True)
     assert response.status_code == 200
     assert 'name="descripcion"' in page
-    assert f'name="campo_{campo_id}"' in page
+    assert f'<select class="form-select" id="campo_{campo_id}" name="campo_{campo_id}" required>' in page
+    assert '<option value="480 GB" >480 GB</option>' in page
+    assert '<option value="1 TB" >1 TB</option>' in page
     assert 'required' in page
 
     response = client.post('/agregar-producto', data={
@@ -170,7 +172,7 @@ def test_delete_product_requires_post_and_hides_product(client, app):
 
     login(client, username='deleteuser')
 
-    response = client.get('/inventario-general')
+    response = client.get(f'/inventario-general?categoria_id={categoria_id}')
     page = response.get_data(as_text=True)
     assert response.status_code == 200
     assert 'Producto de prueba para eliminar' in page
@@ -207,6 +209,177 @@ def setup_user(username='testuser'):
     db.session.add(u)
     db.session.commit()
     return u
+
+
+def test_inventory_general_waits_for_selected_category(client, app):
+    with app.app_context():
+        setup_user('inventoryfilteruser')
+        categoria = Categoria(nombre='Filtro inventario inicial')
+        db.session.add(categoria)
+        db.session.flush()
+        item = Item(
+            categoria_id=categoria.id,
+            datos={'Descripción': 'Item para filtro inicial'},
+            stock=1,
+        )
+        db.session.add(item)
+        db.session.commit()
+        categoria_id = categoria.id
+
+    login(client, username='inventoryfilteruser')
+
+    response = client.get('/inventario-general')
+    page = response.get_data(as_text=True)
+    assert response.status_code == 200
+    assert 'Item para filtro inicial' not in page
+    assert 'Selecciona al menos una categoría' in page
+    assert f'value="{categoria_id}"' in page
+    assert f'value="{categoria_id}" checked' not in page
+    assert 'href="/inventario-general?' in page
+    assert f'categoria_id={categoria_id}' in page
+
+    response = client.get(f'/inventario-general?categoria_id={categoria_id}')
+    page = response.get_data(as_text=True)
+    assert response.status_code == 200
+    assert 'Item para filtro inicial' in page
+    assert f'value="{categoria_id}" checked' in page
+
+
+def test_category_field_configuration_can_be_edited(client, app):
+    with app.app_context():
+        setup_user('editcategoryfielduser')
+        categoria = Categoria(nombre='Categoría editar configuración')
+        db.session.add(categoria)
+        db.session.flush()
+        campo = Campo(categoria_id=categoria.id, nombre='Estado', tipo='text')
+        item = Item(
+            categoria_id=categoria.id,
+            datos={'Descripción': 'Producto de prueba', 'Estado': 'Nuevo'},
+        )
+        db.session.add_all([campo, item])
+        db.session.commit()
+        categoria_id = categoria.id
+        campo_id = campo.id
+
+    login(client, username='editcategoryfielduser')
+
+    response = client.get(f'/categoria/{categoria_id}/campos')
+    page = response.get_data(as_text=True)
+    assert response.status_code == 200
+    assert 'Modificar campo' in page
+    assert f'name="campo_id" value="{campo_id}"' in page
+
+    response = client.post(f'/categoria/{categoria_id}/campos', data={
+        'action': 'edit_campo',
+        'campo_id': str(campo_id),
+        'nombre_campo': 'Condición',
+        'tipo_campo': 'select',
+        'opciones': 'Nuevo, Usado',
+        'requerido': 'on',
+    }, follow_redirects=True)
+    assert response.status_code == 200
+    assert 'Campo' in response.get_data(as_text=True)
+    assert 'actualizado' in response.get_data(as_text=True)
+
+    campo = Campo.query.filter_by(id=campo_id).one()
+    item = Item.query.filter_by(categoria_id=categoria_id).one()
+    assert campo.nombre == 'Condición'
+    assert campo.tipo == 'select'
+    assert campo.opciones == 'Nuevo, Usado'
+    assert campo.requerido is True
+    assert item.datos == {'Descripción': 'Producto de prueba', 'Condición': 'Nuevo'}
+
+
+def test_category_can_only_be_deleted_when_it_has_no_products(client, app):
+    with app.app_context():
+        setup_user('deletecategoryuser')
+        empty_category = Categoria(nombre='Categoría sin productos')
+        used_category = Categoria(nombre='Categoría con producto para eliminación')
+        db.session.add_all([empty_category, used_category])
+        db.session.flush()
+        item = Item(categoria_id=used_category.id, datos={'Descripción': 'Producto'})
+        db.session.add(item)
+        db.session.commit()
+        empty_category_id = empty_category.id
+        used_category_id = used_category.id
+        item_id = item.id
+
+    login(client, username='deletecategoryuser')
+
+    response = client.get('/equipos')
+    page = response.get_data(as_text=True)
+    assert response.status_code == 200
+    assert f'/categoria/{empty_category_id}/eliminar' in page
+    assert 'disabled title="Elimina primero los productos relacionados"' in page
+
+    response = client.post(f'/categoria/{used_category_id}/eliminar', follow_redirects=True)
+    assert response.status_code == 200
+    assert 'No se puede eliminar la categoría porque tiene productos relacionados' in response.get_data(as_text=True)
+    assert Categoria.query.filter_by(id=used_category_id).first() is not None
+    assert Item.query.filter_by(id=item_id).first() is not None
+
+    response = client.post(f'/categoria/{empty_category_id}/eliminar', follow_redirects=True)
+    assert response.status_code == 200
+    assert 'Categoría' in response.get_data(as_text=True)
+    assert Categoria.query.filter_by(id=empty_category_id).first() is None
+
+
+def test_edit_product_can_fill_category_field_added_after_creation(client, app):
+    with app.app_context():
+        setup_user('editcustomfielduser')
+        categoria = Categoria(nombre='Categoría campo nuevo')
+        db.session.add(categoria)
+        db.session.flush()
+        item = Item(
+            categoria_id=categoria.id,
+            datos={'Descripción': 'Producto existente', 'Modelo': 'REF-01'},
+            stock=2,
+        )
+        db.session.add(item)
+        db.session.flush()
+        campo = Campo(
+            categoria_id=categoria.id,
+            nombre='Condición',
+            tipo='select',
+            opciones='Nuevo,Usado',
+            requerido=True,
+        )
+        db.session.add(campo)
+        db.session.commit()
+        item_id = item.id
+        campo_id = campo.id
+
+    login(client, username='editcustomfielduser')
+
+    response = client.get(f'/editar-producto/{item_id}')
+    page = response.get_data(as_text=True)
+    assert response.status_code == 200
+    assert 'Condición' in page
+    assert f'<select class="form-select" id="campo_{campo_id}" name="campo_{campo_id}" required>' in page
+    assert '<option value="Nuevo" >Nuevo</option>' in page
+    assert '<option value="Usado" >Usado</option>' in page
+
+    response = client.post(f'/editar-producto/{item_id}', data={
+        'descripcion': 'Producto existente actualizado',
+        'modelo': 'REF-02',
+        f'campo_{campo_id}': 'Usado',
+    })
+    assert response.status_code == 302
+    item = Item.query.filter_by(id=item_id).one()
+    assert item.datos == {
+        'Descripción': 'Producto existente actualizado',
+        'Modelo': 'REF-02',
+        'Condición': 'Usado',
+    }
+
+    response = client.post(f'/editar-producto/{item_id}', data={
+        'descripcion': 'No debe guardarse',
+        'modelo': 'REF-03',
+        f'campo_{campo_id}': 'No válido',
+    }, follow_redirects=True)
+    assert response.status_code == 200
+    assert 'Selecciona una opción válida para el campo' in response.get_data(as_text=True)
+    assert item.datos['Descripción'] == 'Producto existente actualizado'
 
 
 def test_full_controller_flow(client, app):
@@ -303,7 +476,7 @@ def test_full_controller_flow(client, app):
     assert 'Items' in text
 
     # inventario general
-    rv = client.get('/inventario-general')
+    rv = client.get(f'/inventario-general?categoria_id={cat.id}')
     assert rv.status_code == 200
 
     # consumir item
@@ -346,7 +519,7 @@ def test_full_controller_flow(client, app):
     assert product.stock == 0
     assert Movimiento.query.filter_by(item_id=product.id, tipo='consumir').count() == movimientos_antes
 
-    rv = client.get('/inventario-general')
+    rv = client.get(f'/inventario-general?categoria_id={cat.id}')
     assert rv.status_code == 200
     assert 'Disco SSD 480 Kingston KC600' in rv.get_data(as_text=True)
 

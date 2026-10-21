@@ -31,6 +31,14 @@
               <div class="card-footer bg-transparent">
                 <a href="/items/{{ categoria.id }}" class="btn btn-sm btn-info">Ver Items</a>
                 <a href="/categoria/{{ categoria.id }}/campos" class="btn btn-sm btn-secondary">Campos</a>
+                {% if categoria.has_products %}
+                  <button type="button" class="btn btn-sm btn-outline-danger" disabled title="Elimina primero los productos relacionados">Eliminar categoría</button>
+                  <small class="d-block text-muted mt-2">No se puede eliminar porque tiene productos relacionados.</small>
+                {% else %}
+                  <form method="post" action="{{ url_for('main.eliminar_categoria', categoria_id=categoria.id) }}" class="d-inline">
+                    <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('¿Eliminar la categoría {{ categoria.nombre }}? Esta acción no se puede deshacer.')">Eliminar categoría</button>
+                  </form>
+                {% endif %}
               </div>
             </div>
           </div>

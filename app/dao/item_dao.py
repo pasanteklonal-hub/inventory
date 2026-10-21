@@ -1,6 +1,18 @@
 from ..models import Item
 
 
+def sort_items_alphabetically(items):
+    return sorted(
+        items,
+        key=lambda item: (
+            str((item.datos or {}).get('Descripción') or (item.datos or {}).get('Descripcion') or '')
+            .strip()
+            .casefold(),
+            item.id or 0,
+        ),
+    )
+
+
 def get_item_by_id(item_id):
     return Item.query.filter_by(id=item_id, eliminado=False).first()
 
@@ -9,7 +21,7 @@ def get_items_by_categoria(categoria_id, active_only=True):
     query = Item.query.filter_by(categoria_id=categoria_id)
     if active_only:
         query = query.filter_by(deleted_at=None, eliminado=False)
-    return query.all()
+    return sort_items_alphabetically(query.all())
 
 
 def get_items_for_inventory(seleccionadas, mostrar_consumidos):
@@ -26,7 +38,7 @@ def get_items_for_inventory(seleccionadas, mostrar_consumidos):
             Item.categoria_id.in_(seleccionadas),
             Item.eliminado.is_(False),
         )
-    return query.all()
+    return sort_items_alphabetically(query.all())
 
 
 def get_active_items_by_categoria(categoria_id):

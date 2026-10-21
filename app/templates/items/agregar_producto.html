@@ -63,20 +63,30 @@
                 <label for="campo_{{ campo.id }}" class="form-label">{{ campo.nombre }} {% if campo.requerido %}<span class="text-danger">*</span>{% endif %}</label>
                 {% set valor = request.form.get('campo_' ~ campo.id, '') %}
                 {% if campo.tipo == 'select' %}
-                  <input
-                    type="search"
-                    class="form-control"
-                    id="campo_{{ campo.id }}"
-                    name="campo_{{ campo.id }}"
-                    list="opciones_campo_{{ campo.id }}"
-                    value="{{ valor }}"
-                    autocomplete="off"
-                    data-opciones-url="{{ url_for('main.api_campo_opciones', categoria_id=categoria_seleccionada.id, campo_id=campo.id) }}"
-                    data-opciones-ayuda="ayuda_campo_{{ campo.id }}"
-                    {% if campo.requerido %}required{% endif %}
-                  >
-                  <datalist id="opciones_campo_{{ campo.id }}"></datalist>
-                  <div class="form-text" id="ayuda_campo_{{ campo.id }}">Escribe al menos 2 caracteres para buscar opciones.</div>
+                  {% set opciones = (campo.opciones or '').split(',') | map('trim') | reject('equalto', '') | list %}
+                  {% if opciones | length <= 50 %}
+                    <select class="form-select" id="campo_{{ campo.id }}" name="campo_{{ campo.id }}" {% if campo.requerido %}required{% endif %}>
+                      <option value="">-- Selecciona --</option>
+                      {% for opcion in opciones %}
+                        <option value="{{ opcion }}" {% if valor == opcion %}selected{% endif %}>{{ opcion }}</option>
+                      {% endfor %}
+                    </select>
+                  {% else %}
+                    <input
+                      type="search"
+                      class="form-control"
+                      id="campo_{{ campo.id }}"
+                      name="campo_{{ campo.id }}"
+                      list="opciones_campo_{{ campo.id }}"
+                      value="{{ valor }}"
+                      autocomplete="off"
+                      data-opciones-url="{{ url_for('main.api_campo_opciones', categoria_id=categoria_seleccionada.id, campo_id=campo.id) }}"
+                      data-opciones-ayuda="ayuda_campo_{{ campo.id }}"
+                      {% if campo.requerido %}required{% endif %}
+                    >
+                    <datalist id="opciones_campo_{{ campo.id }}"></datalist>
+                    <div class="form-text" id="ayuda_campo_{{ campo.id }}">Escribe al menos 2 caracteres para buscar opciones.</div>
+                  {% endif %}
                 {% elif campo.tipo == 'textarea' %}
                   <textarea class="form-control" id="campo_{{ campo.id }}" name="campo_{{ campo.id }}" rows="3" {% if campo.requerido %}required{% endif %}>{{ valor }}</textarea>
                 {% elif campo.tipo == 'date' %}

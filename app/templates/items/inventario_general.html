@@ -7,7 +7,7 @@
     <div class="d-flex justify-content-between align-items-center mb-4">
       <div>
         <h2>Inventario General</h2>
-        <p class="text-muted mb-0">Filtra items por categoría. Si no seleccionas ninguna categoría, se muestran todos.</p>
+        <p class="text-muted mb-0">Selecciona una o más categorías para consultar sus items.</p>
       </div>
       <a href="/" class="btn btn-secondary">Volver al dashboard</a>
     </div>
@@ -36,9 +36,9 @@
               </div>
             </div>
           {% endfor %}
-          <div class="col-12">
+          <div class="col-12 d-flex justify-content-center gap-2">
             <button type="submit" class="btn btn-primary">Filtrar</button>
-            <a href="/inventario-general" class="btn btn-outline-secondary">Ver todo</a>
+            <a href="/inventario-general{% for categoria in categorias %}{{ '?' if loop.first else '&' }}categoria_id={{ categoria.id }}{% endfor %}{% if mostrar_consumidos %}{{ '&' if categorias else '?' }}mostrar_consumidos=1{% endif %}" class="btn btn-outline-primary">Ver todo</a>
           </div>
         </form>
       </div>
@@ -93,9 +93,15 @@
         </table>
       </div>
     {% else %}
-      <div class="alert alert-info">
-        No hay {{ 'items consumidos' if mostrar_consumidos else 'items activos' }} para mostrar con los filtros seleccionados.
-      </div>
+      {% if seleccionadas %}
+        <div class="alert alert-info">
+          No hay {{ 'items consumidos' if mostrar_consumidos else 'items activos' }} para mostrar con los filtros seleccionados.
+        </div>
+      {% else %}
+        <div class="alert alert-info">
+          Selecciona al menos una categoría y presiona «Filtrar» para consultar el inventario.
+        </div>
+      {% endif %}
     {% endif %}
   </div>
 {% endblock %}

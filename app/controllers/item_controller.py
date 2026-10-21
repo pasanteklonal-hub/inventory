@@ -16,6 +16,7 @@ from ..services.item_service import (
     get_items_for_inventory,
 )
 from ..services.category_service import get_categoria_or_404
+from ..dao.item_dao import sort_items_alphabetically
 
 
 @main_bp.route('/agregar-producto', methods=['GET', 'POST'])
@@ -94,6 +95,7 @@ def editar_item(item_id):
 @login_required
 def editar_producto(item_id):
     item = get_item_or_404(item_id)
+    campos = sorted(item.categoria.campos, key=lambda campo: (campo.orden or 0, campo.id))
 
     if request.method == 'POST':
         descripcion = request.form.get('descripcion', '').strip()
@@ -102,13 +104,29 @@ def editar_producto(item_id):
             return redirect(url_for('main.editar_producto', item_id=item.id))
 
         datos = dict(item.datos or {})
+        for campo in campos:
+            key = f'campo_{campo.id}'
+            valor = (
+                request.form.get(key, '').strip()
+                if key in request.form
+                else str(datos.get(campo.nombre) or '').strip()
+            )
+            if campo.requerido and not valor:
+                flash(f"El campo '{campo.nombre}' es requerido", 'danger')
+                return redirect(url_for('main.editar_producto', item_id=item.id))
+            if valor and campo.tipo == 'select' and campo.opciones:
+                opciones = [opcion.strip() for opcion in campo.opciones.split(',') if opcion.strip()]
+                if valor not in opciones:
+                    flash(f"Selecciona una opción válida para el campo '{campo.nombre}'", 'danger')
+                    return redirect(url_for('main.editar_producto', item_id=item.id))
+            datos[campo.nombre] = valor
         datos['Descripción'] = descripcion
         datos['Modelo'] = request.form.get('modelo', '').strip()
         update_item(item, datos, current_user.id)
         flash('Producto actualizado correctamente', 'success')
         return redirect(url_for('main.inventario_general'))
 
-    return render_template('items/editar_producto.html', item=item)
+    return render_template('items/editar_producto.html', item=item, campos=campos)
 
 
 @main_bp.route('/eliminar-producto/<int:item_id>', methods=['POST'])
@@ -230,7 +248,9 @@ def agregar_stock():
 
     categorias = list_categories()
     items_por_categoria = {
-        categoria.id: Item.query.filter_by(categoria_id=categoria.id, eliminado=False).all()
+        categoria.id: sort_items_alphabetically(
+            Item.query.filter_by(categoria_id=categoria.id, eliminado=False).all()
+        )
         for categoria in categorias
     }
     producto_id = request.args.get('producto_id', type=int)

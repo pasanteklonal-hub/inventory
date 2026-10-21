@@ -2,6 +2,7 @@ import json
 from io import BytesIO
 from datetime import datetime
 from flask import send_file
+from sqlalchemy import func
 from reportlab.lib.pagesizes import letter
 from reportlab.lib import colors
 from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
@@ -12,11 +13,15 @@ from openpyxl.styles import Font, Alignment
 
 from ..models import Categoria, Campo, Item, Movimiento
 from .. import db
+from ..dao.item_dao import sort_items_alphabetically
 from .item_service import validate_quantity
 
 
 def build_reporte_semanal(request):
-    categorias = Categoria.query.filter_by(deleted_at=None).all()
+    categorias = Categoria.query.filter_by(deleted_at=None).order_by(
+        func.lower(Categoria.nombre),
+        Categoria.id,
+    ).all()
     selected = request.values.getlist('categoria_id', type=int)
 
     if selected:
@@ -28,6 +33,7 @@ def build_reporte_semanal(request):
     else:
         items = Item.query.filter(Item.deleted_at.is_(None), Item.eliminado.is_(False)).all()
         selected = [c.id for c in categorias]
+    items = sort_items_alphabetically(items)
 
     summary = []
     for categoria in categorias:
@@ -198,10 +204,15 @@ def export_reporte_semanal_pdf(summary, items, generado_el=None):
 
 
 def export_inventario_json():
-    categorias = Categoria.query.filter_by(deleted_at=None).all()
+    categorias = Categoria.query.filter_by(deleted_at=None).order_by(
+        func.lower(Categoria.nombre),
+        Categoria.id,
+    ).all()
     out = {}
     for cat in categorias:
-        items = Item.query.filter_by(categoria_id=cat.id, deleted_at=None, eliminado=False).all()
+        items = sort_items_alphabetically(
+            Item.query.filter_by(categoria_id=cat.id, deleted_at=None, eliminado=False).all()
+        )
         out[cat.nombre] = [
             {'categoria': cat.nombre, **(item.datos or {}), '__inventory_stock__': item.stock}
             for item in items

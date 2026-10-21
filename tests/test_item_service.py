@@ -68,8 +68,29 @@ def test_consume_item_and_create(app):
     assert consumed.deleted_at is None
     assert consumed.stock == 0
     assert consumed.estado == 'Sin stock'
-    inventory_items, _ = get_items_for_inventory([cat], [], mostrar_consumidos=False)
+    inventory_items, _ = get_items_for_inventory([cat], [cat.id], mostrar_consumidos=False)
     assert any(inventory_item.id == item.id for inventory_item in inventory_items)
+
+
+def test_inventory_items_are_alphabetical(app):
+    categoria = Categoria(nombre='Orden alfabetico de productos')
+    db.session.add(categoria)
+    db.session.flush()
+    items = [
+        Item(categoria_id=categoria.id, datos={'Descripción': 'Zebra'}),
+        Item(categoria_id=categoria.id, datos={'Descripción': 'alfa'}),
+        Item(categoria_id=categoria.id, datos={'Descripción': 'Beta'}),
+    ]
+    db.session.add_all(items)
+    db.session.commit()
+
+    ordered_items, _ = get_items_for_inventory(
+        [categoria],
+        [categoria.id],
+        mostrar_consumidos=False,
+    )
+
+    assert [item.datos['Descripción'] for item in ordered_items] == ['alfa', 'Beta', 'Zebra']
 
 
 def test_stock_can_be_added_and_consumed_in_quantities(app):
@@ -97,7 +118,7 @@ def test_stock_can_be_added_and_consumed_in_quantities(app):
     consume_item(item.id, usuario_id=1, destino='Taller', observacion='', cantidad=2)
     assert item.stock == 0
     assert item.deleted_at is None
-    inventory_items, _ = get_items_for_inventory([cat], [], mostrar_consumidos=False)
+    inventory_items, _ = get_items_for_inventory([cat], [cat.id], mostrar_consumidos=False)
     assert any(inventory_item.id == item.id for inventory_item in inventory_items)
 
     add_stock(item.id, usuario_id=1, cantidad=4)

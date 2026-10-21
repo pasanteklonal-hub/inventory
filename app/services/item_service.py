@@ -1,6 +1,7 @@
 from .. import db
 from ..models import Item, Movimiento, Categoria, Campo
 from ..dao.categoria_dao import get_active_categories
+from ..dao.item_dao import sort_items_alphabetically
 from sqlalchemy import or_
 from datetime import datetime
 
@@ -170,14 +171,16 @@ def filter_items_by_categoria(categoria_id, filtros):
 
         return True
 
-    return [item for item in items_q if matches(item)]
+    return sort_items_alphabetically(item for item in items_q if matches(item))
 
 
 def list_items_for_consumption():
     categorias = list_categories()
     items_por_categoria = {
-        cat.id: Item.query.filter_by(categoria_id=cat.id, deleted_at=None, eliminado=False)
-        .filter(Item.stock > 0).all()
+        cat.id: sort_items_alphabetically(
+            Item.query.filter_by(categoria_id=cat.id, deleted_at=None, eliminado=False)
+            .filter(Item.stock > 0).all()
+        )
         for cat in categorias
     }
     return categorias, items_por_categoria
@@ -185,10 +188,9 @@ def list_items_for_consumption():
 
 def get_items_for_inventory(categorias, selected, mostrar_consumidos):
     if not selected:
-        seleccionadas = [c.id for c in categorias]
-    else:
-        seleccionadas = selected
+        return [], []
 
+    seleccionadas = selected
     query = Item.query
     if mostrar_consumidos:
         query = query.filter(
@@ -204,7 +206,7 @@ def get_items_for_inventory(categorias, selected, mostrar_consumidos):
             or_(Item.deleted_at.is_(None), Item.stock == 0),
         )
 
-    return query.all(), seleccionadas
+    return sort_items_alphabetically(query.all()), seleccionadas
 
 
 def add_stock(item_id, usuario_id, cantidad, observacion=None):

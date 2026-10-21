@@ -35,6 +35,51 @@
             >
           </div>
 
+          {% for campo in campos %}
+            <div class="mb-4">
+              <label for="campo_{{ campo.id }}" class="form-label">
+                {{ campo.nombre }}{% if campo.requerido %} <span class="text-danger">*</span>{% endif %}
+              </label>
+              {% set valor = (item.datos or {}).get(campo.nombre, '') %}
+              {% if campo.tipo == 'select' %}
+                {% set opciones = (campo.opciones or '').split(',') | map('trim') | reject('equalto', '') | list %}
+                {% if opciones | length <= 50 %}
+                  <select class="form-select" id="campo_{{ campo.id }}" name="campo_{{ campo.id }}" {% if campo.requerido %}required{% endif %}>
+                    <option value="">-- Selecciona --</option>
+                    {% for opcion in opciones %}
+                      <option value="{{ opcion }}" {% if valor == opcion %}selected{% endif %}>{{ opcion }}</option>
+                    {% endfor %}
+                  </select>
+                {% else %}
+                  <input
+                    type="search"
+                    class="form-control"
+                    id="campo_{{ campo.id }}"
+                    name="campo_{{ campo.id }}"
+                    list="opciones_campo_{{ campo.id }}"
+                    value="{{ valor }}"
+                    autocomplete="off"
+                    data-opciones-url="{{ url_for('main.api_campo_opciones', categoria_id=item.categoria_id, campo_id=campo.id) }}"
+                    data-opciones-ayuda="ayuda_campo_{{ campo.id }}"
+                    {% if campo.requerido %}required{% endif %}
+                  >
+                  <datalist id="opciones_campo_{{ campo.id }}"></datalist>
+                  <div class="form-text" id="ayuda_campo_{{ campo.id }}">Escribe al menos 2 caracteres para buscar opciones.</div>
+                {% endif %}
+              {% elif campo.tipo == 'textarea' %}
+                <textarea class="form-control" id="campo_{{ campo.id }}" name="campo_{{ campo.id }}" rows="3" {% if campo.requerido %}required{% endif %}>{{ valor }}</textarea>
+              {% elif campo.tipo == 'date' %}
+                <input type="date" class="form-control" id="campo_{{ campo.id }}" name="campo_{{ campo.id }}" value="{{ valor }}" {% if campo.requerido %}required{% endif %}>
+              {% elif campo.tipo == 'number' %}
+                <input type="number" class="form-control" id="campo_{{ campo.id }}" name="campo_{{ campo.id }}" value="{{ valor }}" {% if campo.requerido %}required{% endif %}>
+              {% elif campo.tipo == 'email' %}
+                <input type="email" class="form-control" id="campo_{{ campo.id }}" name="campo_{{ campo.id }}" value="{{ valor }}" {% if campo.requerido %}required{% endif %}>
+              {% else %}
+                <input type="text" class="form-control" id="campo_{{ campo.id }}" name="campo_{{ campo.id }}" value="{{ valor }}" {% if campo.requerido %}required{% endif %}>
+              {% endif %}
+            </div>
+          {% endfor %}
+
           <div class="d-flex justify-content-between align-items-center">
             <div>
               <button type="button" class="btn btn-outline-danger" data-bs-toggle="modal" data-bs-target="#eliminarProducto">Eliminar producto</button>
@@ -67,4 +112,61 @@
       </div>
     </div>
   </div>
+{% endblock %}
+
+{% block scripts %}
+  {{ super() }}
+  <script>
+    document.querySelectorAll('[data-opciones-url]').forEach(function(input) {
+      var datalist = document.getElementById(input.getAttribute('list'));
+      var help = document.getElementById(input.dataset.opcionesAyuda);
+      var timeout;
+      var controller;
+
+      input.addEventListener('input', function() {
+        window.clearTimeout(timeout);
+        if (controller) {
+          controller.abort();
+        }
+
+        var query = input.value.trim();
+        datalist.replaceChildren();
+        if (query.length < 2) {
+          help.textContent = 'Escribe al menos 2 caracteres para buscar opciones.';
+          return;
+        }
+
+        timeout = window.setTimeout(function() {
+          controller = new AbortController();
+          var url = new URL(input.dataset.opcionesUrl, window.location.origin);
+          url.searchParams.set('q', query);
+          fetch(url, {signal: controller.signal})
+            .then(function(response) {
+              if (!response.ok) {
+                throw new Error('No se pudieron cargar las opciones.');
+              }
+              return response.json();
+            })
+            .then(function(result) {
+              datalist.replaceChildren();
+              result.opciones.forEach(function(opcion) {
+                var option = document.createElement('option');
+                option.value = opcion;
+                datalist.appendChild(option);
+              });
+              help.textContent = result.opciones.length
+                ? (result.hay_mas
+                    ? 'Se muestran las primeras 50 coincidencias; escribe más para afinar la búsqueda.'
+                    : 'Selecciona una opción de la lista.')
+                : 'No se encontraron opciones coincidentes.';
+            })
+            .catch(function(error) {
+              if (error.name !== 'AbortError') {
+                help.textContent = error.message;
+              }
+            });
+        }, 200);
+      });
+    });
+  </script>
 {% endblock %}
