@@ -1,4 +1,5 @@
 import json
+from io import BytesIO
 from app import db
 from app.models import Categoria, Item, Campo
 from app.services.report_service import (
@@ -8,6 +9,41 @@ from app.services.report_service import (
     export_inventario_json,
 )
 from flask import request
+
+
+def test_weekly_report_details_only_show_category_data_and_stock(app):
+    categoria = Categoria(nombre='Detalle Reporte')
+    db.session.add(categoria)
+    db.session.flush()
+    item = Item(
+        categoria_id=categoria.id,
+        datos={'Descripción': 'Monitor', 'Modelo': 'M24'},
+        stock=4,
+    )
+    db.session.add(item)
+    db.session.commit()
+
+    generado_el = '20/10/2026 15:30'
+    with app.test_request_context('/reporte-semanal'):
+        response = export_reporte_semanal_xlsx(
+            [{'categoria': categoria.nombre, 'stock': 4}],
+            [item],
+            generado_el,
+        )
+        response.direct_passthrough = False
+
+        from openpyxl import load_workbook
+        workbook = load_workbook(BytesIO(response.get_data()), read_only=True)
+        worksheet = workbook.active
+        rows = list(worksheet.iter_rows(values_only=True))
+        detail_header_index = rows.index(('Categoría', 'Datos', 'Stock'))
+
+        assert rows[1][:2] == ('Generado el', generado_el)
+        assert rows[detail_header_index + 1] == (
+            categoria.nombre,
+            'Descripción: Monitor / Modelo: M24',
+            4,
+        )
 
 
 def test_report_exports(app):

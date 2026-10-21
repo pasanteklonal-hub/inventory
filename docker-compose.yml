@@ -20,6 +20,7 @@ services:
     command: gunicorn --workers 2 --threads 4 --timeout 60 -b 0.0.0.0:5000 run:app
     volumes:
       - .:/app
+      - /etc/localtime:/etc/localtime:ro
     ports:
       - "5000:5000"
     environment:

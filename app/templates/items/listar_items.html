@@ -108,7 +108,7 @@
                     <span class="cell-value">{{ item.datos.get(campo.nombre, 'N/A') if item.datos else 'N/A' }}</span>
                   </td>
                 {% endfor %}
-                <td><small class="text-muted">{{ item.created_at.strftime('%d/%m/%Y') }}</small></td>
+                <td><small class="text-muted">{{ item.created_at|localdatetime('%d/%m/%Y') }}</small></td>
                 <td>
                   <a href="/editar-producto/{{ item.id }}" class="btn btn-sm btn-outline-primary">Editar producto</a>
                 </td>

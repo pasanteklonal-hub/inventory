@@ -23,7 +23,7 @@
           <tbody>
             {% for mov in movimientos %}
               <tr>
-                <td><small>{{ mov.created_at.strftime('%d/%m/%Y %H:%M') }}</small></td>
+                <td><small>{{ mov.created_at|localdatetime }}</small></td>
                 <td><strong>{{ mov.usuario.username }}</strong></td>
                 <td>
                   {% if mov.tipo == 'agregar' %}

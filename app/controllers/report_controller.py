@@ -1,3 +1,4 @@
+from datetime import datetime
 from flask import render_template, request
 from flask_login import login_required
 
@@ -16,12 +17,13 @@ from ..services.report_service import (
 @login_required
 def reporte_semanal():
     categorias, summary, items, selected = build_reporte_semanal(request)
+    generado_el = datetime.now().strftime('%d/%m/%Y %H:%M')
 
     if request.args.get('export') == 'xlsx':
-        return export_reporte_semanal_xlsx(summary, items)
+        return export_reporte_semanal_xlsx(summary, items, generado_el)
 
     if request.args.get('export') == 'pdf':
-        return export_reporte_semanal_pdf(summary, items)
+        return export_reporte_semanal_pdf(summary, items, generado_el)
 
     return render_template(
         'reports/reporte_semanal.html',
@@ -30,6 +32,7 @@ def reporte_semanal():
         items=items,
         selected=selected,
         total_stock=sum(row['stock'] for row in summary),
+        generado_el=generado_el,
     )
 
 

@@ -97,6 +97,52 @@ def test_create_product_uses_selected_category_fields(client, app):
     assert producto.stock == 0
 
 
+def test_product_select_options_are_searched_and_limited(client, app):
+    with app.app_context():
+        setup_user('optionsuser')
+        categoria = Categoria(nombre='Categoría con muchas opciones')
+        db.session.add(categoria)
+        db.session.flush()
+        opciones = ','.join(f'Producto {index:05d}' for index in range(12000))
+        campo = Campo(
+            categoria_id=categoria.id,
+            nombre='Producto compatible',
+            tipo='select',
+            opciones=opciones,
+            requerido=True,
+        )
+        db.session.add(campo)
+        db.session.commit()
+        categoria_id = categoria.id
+        campo_id = campo.id
+
+    login(client, username='optionsuser')
+
+    response = client.get(f'/agregar-producto?categoria_id={categoria_id}')
+    page = response.get_data(as_text=True)
+    assert response.status_code == 200
+    assert 'data-opciones-url=' in page
+    assert 'Producto 00000' not in page
+    assert len(page) < 30000
+
+    response = client.get(
+        f'/api/categorias/{categoria_id}/campos/{campo_id}/opciones?q=producto'
+    )
+    assert response.status_code == 200
+    result = response.get_json()
+    assert len(result['opciones']) == 50
+    assert result['hay_mas'] is True
+    assert result['opciones'][0] == 'Producto 00000'
+
+    response = client.get(
+        f'/api/categorias/{categoria_id}/campos/{campo_id}/opciones?q=producto%2011999'
+    )
+    assert response.get_json() == {
+        'opciones': ['Producto 11999'],
+        'hay_mas': False,
+    }
+
+
 def test_delete_product_requires_post_and_hides_product(client, app):
     with app.app_context():
         usuario = setup_user('deleteuser')

@@ -17,7 +17,7 @@ from .item_service import validate_quantity
 
 def build_reporte_semanal(request):
     categorias = Categoria.query.filter_by(deleted_at=None).all()
-    selected = request.args.getlist('categoria_id', type=int)
+    selected = request.values.getlist('categoria_id', type=int)
 
     if selected:
         items = Item.query.filter(
@@ -43,7 +43,7 @@ def build_reporte_semanal(request):
     return categorias, summary, items, selected
 
 
-def export_reporte_semanal_xlsx(summary, items):
+def export_reporte_semanal_xlsx(summary, items, generado_el=None):
     wb = Workbook()
     ws = wb.active
     ws.title = 'Inventario Semanal'
@@ -53,7 +53,7 @@ def export_reporte_semanal_xlsx(summary, items):
 
     ws.append(['Reporte Semanal de Inventario'])
     ws['A1'].font = Font(size=16, bold=True)
-    ws.append(['Generado el', datetime.utcnow().strftime('%d/%m/%Y %H:%M UTC')])
+    ws.append(['Generado el', generado_el or datetime.now().strftime('%d/%m/%Y %H:%M')])
     ws.append([])
     ws.append(['Resumen por Categoría'])
     ws['A4'].font = title_font
@@ -69,24 +69,20 @@ def export_reporte_semanal_xlsx(summary, items):
     ws.append([])
     ws.append(['Detalle de Items'])
     ws['A' + str(ws.max_row)].font = title_font
-    ws.append(['ID', 'Número de Serie', 'Categoría', 'Datos', 'Stock', 'Creado'])
+    ws.append(['Categoría', 'Datos', 'Stock'])
     for cell in ws[ws.max_row]:
         cell.font = title_font
         cell.alignment = center
     for item in items:
         datos_texto = ' / '.join(f"{k}: {v}" for k, v in (item.datos or {}).items())
         ws.append([
-            item.id,
-            item.serial,
             item.categoria.nombre,
             datos_texto,
             item.stock,
-            item.created_at.strftime('%d/%m/%Y %H:%M'),
         ])
-        for col in range(1, 7):
+        for col in range(1, 4):
             ws.cell(row=ws.max_row, column=col).font = data_font
-            if col != 6:
-                ws.cell(row=ws.max_row, column=col).alignment = Alignment(wrap_text=True, vertical='top')
+            ws.cell(row=ws.max_row, column=col).alignment = Alignment(wrap_text=True, vertical='top')
 
     for column_cells in ws.columns:
         max_length = 0
@@ -111,7 +107,7 @@ def export_reporte_semanal_xlsx(summary, items):
     )
 
 
-def export_reporte_semanal_pdf(summary, items):
+def build_reporte_semanal_pdf(summary, items, generado_el=None):
     output = BytesIO()
     doc = SimpleDocTemplate(
         output,
@@ -129,7 +125,7 @@ def export_reporte_semanal_pdf(summary, items):
     elements = []
     elements.append(Paragraph('Reporte Semanal de Inventario', styles['ReportTitle']))
     elements.append(Paragraph(
-        f"Fecha de generación: {datetime.utcnow().strftime('%d/%m/%Y %H:%M UTC')}",
+        f"Fecha de generación: {generado_el or datetime.now().strftime('%d/%m/%Y %H:%M')}",
         styles['ReportSubtitle'],
     ))
     elements.append(
@@ -157,19 +153,16 @@ def export_reporte_semanal_pdf(summary, items):
     elements.append(Spacer(1, 20))
 
     elements.append(Paragraph('Detalle de Items', styles['ReportSubtitle']))
-    items_data = [['ID', 'Serie', 'Categoría', 'Datos', 'Stock', 'Creado']]
+    items_data = [['Categoría', 'Datos', 'Stock']]
     for item in items:
         datos_texto = '<br/>'.join(f'{k}: {v}' for k, v in (item.datos or {}).items())
         items_data.append([
-            Paragraph(str(item.id), styles['ReportNormal']),
-            Paragraph(str(item.serial or '-'), styles['ReportNormal']),
             Paragraph(item.categoria.nombre, styles['ReportNormal']),
             Paragraph(datos_texto or 'Sin datos', styles['ReportNormal']),
             Paragraph(str(item.stock), styles['ReportNormal']),
-            Paragraph(item.created_at.strftime('%d/%m/%Y %H:%M'), styles['ReportNormal']),
         ])
 
-    col_widths = [0.45 * inch, 0.85 * inch, 1.2 * inch, 2.7 * inch, 0.55 * inch, 1.2 * inch]
+    col_widths = [1.5 * inch, 5.0 * inch, 0.7 * inch]
     items_table = LongTable(items_data, colWidths=col_widths, repeatRows=1, splitByRow=1)
     items_table.setStyle(TableStyle([
         ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#4f81bd')),
@@ -190,6 +183,11 @@ def export_reporte_semanal_pdf(summary, items):
 
     doc.build(elements)
     output.seek(0)
+    return output.getvalue()
+
+
+def export_reporte_semanal_pdf(summary, items, generado_el=None):
+    output = BytesIO(build_reporte_semanal_pdf(summary, items, generado_el))
 
     return send_file(
         output,
