@@ -4,13 +4,13 @@
 
 {% block content %}
   <div class="py-5">
-    <h1 class="display-5 mb-4">Bienvenido, {{ current_user.username }}</h1>
+    <h1 class="display-5 mb-4">Bienvenido, {{ current_user.username[:1]|upper }}{{ current_user.username[1:] }}</h1>
     <p class="lead text-muted mb-5">A continuación tienes las opciones de gestión agrupadas por área para acceder rápido a los flujos principales.</p>
 
     <div class="row g-4">
       <div class="col-md-4">
         <div class="dashboard-column items shadow-sm h-100">
-          <div class="dashboard-column-header bg-white">
+          <div class="dashboard-column-header">
             <div class="dashboard-column-title">Items</div>
             <div class="dashboard-column-subtitle">Acciones de alta y baja de stock.</div>
           </div>
@@ -30,7 +30,7 @@
 
       <div class="col-md-4">
         <div class="dashboard-column inventario shadow-sm h-100">
-          <div class="dashboard-column-header bg-white">
+          <div class="dashboard-column-header">
             <div class="dashboard-column-title">Inventario</div>
             <div class="dashboard-column-subtitle">Consulta y administra tus categorías y stock.</div>
           </div>
@@ -47,7 +47,7 @@
 
       <div class="col-md-4">
         <div class="dashboard-column reporte shadow-sm h-100">
-          <div class="dashboard-column-header bg-white">
+          <div class="dashboard-column-header">
             <div class="dashboard-column-title">Reporte</div>
             <div class="dashboard-column-subtitle">Accede a los reportes de actividad y movimientos.</div>
           </div>

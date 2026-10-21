@@ -16,7 +16,10 @@ def test_registration_logs_in_new_user(client):
 
     assert response.status_code == 200
     page = response.get_data(as_text=True)
-    assert 'Bienvenido, newuser' in page
+    assert 'Bienvenido, Newuser' in page
+    assert 'Newuser' in page
+    assert 'id="themeToggle"' in page
+    assert 'favicon.svg' in page
     assert 'href="/reporte-semanal">Reporte Semanal</a>' in page
     assert 'href="/reportes">Reporte de Movimientos</a>' in page
     with client.session_transaction() as session:

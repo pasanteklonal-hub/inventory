@@ -24,7 +24,7 @@
             {% for mov in movimientos %}
               <tr>
                 <td><small>{{ mov.created_at|localdatetime }}</small></td>
-                <td><strong>{{ mov.usuario.username }}</strong></td>
+                <td><strong>{{ mov.usuario.username[:1]|upper }}{{ mov.usuario.username[1:] }}</strong></td>
                 <td>
                   {% if mov.tipo == 'agregar' %}
                     <span class="badge bg-success">{{ mov.tipo }}</span>
